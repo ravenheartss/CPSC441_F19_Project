@@ -1,0 +1,5 @@
+.idea/
+cmake-build-debug/
+Server.cpp
+main.cpp
+wrdgen.cpp
