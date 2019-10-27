@@ -3,8 +3,6 @@
  * Group 3 Project
  */
 
-// Author: Shankar Ganesh
-
 // Include necessary libraries
 #include <iostream>
 #include <sys/socket.h>
@@ -19,13 +17,13 @@
 
 #define BUFFERSIZE 512
 
-volatile sig_atomic_t force_quit = 0;
+//volatile sig_atomic_t force_quit = 0;
+//
+//void handle(int signum) {
+//    force_quit = 1;
+//}
 
-void handle(int signum) {
-    force_quit = 1;
-}
-
-int main() {
+int main(int argc, char * argv[]) {
 
     int socket_desc;
     struct sockaddr_in serverAddr;
@@ -40,11 +38,11 @@ int main() {
     bool quit;
 
     // To be changed
-    const char * server_IP = "192.168.1.1";
-    int port = 2055;
+    const char * server_IP = "127.0.0.1";
+    int port = atoi(argv[1]);
 
 
-    signal(SIGINT, handle);
+//    signal(SIGINT, handle);
 
     if ((socket_desc = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
     {
@@ -70,12 +68,13 @@ int main() {
         exit(1);
     }
 
-    while (!force_quit && !quit) {
+    while (!quit) {
         // Clear the buffers
+
+//        std::cout << "#1" << std::endl;
+        total_size = 0;
         memset(&outBuffer, 0, BUFFERSIZE);
         memset(&inBuffer, 0, BUFFERSIZE);
-
-        total_size = 0;
         bytesRecv = recv(socket_desc, (unsigned char *) &total_size, sizeof(size_t), 0);
 
         if (bytesRecv <= 0) {
@@ -90,13 +89,20 @@ int main() {
         if (bytesRecv <= 0) {
             std::cout << "Error in receiving message from server. Try restarting the game" << std::endl;
         }
-
+        if (strncmp(std::string(inBuffer).substr(total_size-2, total_size).c_str(), ": ", 2) != 0){
+            std::cout << std::string(inBuffer).substr(total_size-3, total_size).c_str() << std::endl;
+            continue;
+        }
         fgets(outBuffer, BUFFERSIZE, stdin);
         total_size = strlen(outBuffer);
 
         bytesSent = send(socket_desc, (char *) &total_size, sizeof(total_size), 0);
 
-        if (bytesSent < 0 || bytesSent != total_size) {
+        if (bytesSent <= 0) {
+            std::cout << "$$$$$$" << std::endl;
+            std::cout << "Total size = " << total_size << std::endl;
+            std::cout << "outBUffer = " << outBuffer << std::endl;
+            perror("Oops");
             std::cout << "Error in sending. Try restarting the game." << std::endl;
             exit(-1);
         }
@@ -104,12 +110,14 @@ int main() {
         bytesSent = send(socket_desc, (char *) &outBuffer, total_size, 0);
 
         if (bytesSent < 0 || bytesSent != total_size) {
+            std::cout << "######" << std::endl;
             std::cout << "Error in sending. Try restarting the game." << std::endl;
+            perror("Oops");
             exit(-1);
         }
 
         std::string check = std::string(outBuffer);
-        if (check.compare("quit")) {
+        if (check.compare("quit") == 0) {
             quit = true;
         }
     }

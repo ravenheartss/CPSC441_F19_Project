@@ -3,9 +3,12 @@ all: User Server
 User: User.cpp
 	g++ -g -o User User.cpp
 
-Server: Server.cpp wrdgen.cpp
-	g++ -g -o Server Server.cpp
-	g++ -g -o wrdgen wrdgen.cpp
+Server: Server.cpp wrdgen.cpp Game.cpp
+	g++ -g -c Server.cpp
+	g++ -g -c wrdgen.cpp
+	g++ -g -c Game.cpp
+	g++ -o Server Server.o wrdgen.o Game.o
+	g++ -o User User.cpp
 
 clean: 
-	rm -f User Server wrdgen
+	rm -rf User Server.o wrdgen.o Game.o Server *.dSYM
