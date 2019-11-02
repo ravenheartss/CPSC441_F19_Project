@@ -18,8 +18,9 @@
 #include <unordered_map>
 #include "Game.h"
 #include "Server.h"
-//#include <cstdio>
-#include <time.h>
+#include <cstdio>
+#include <ctime>
+//#include <time.h>
 
 
 const int BUFFERSIZE = 512;   // Size the message buffers
