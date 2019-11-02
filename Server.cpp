@@ -60,7 +60,10 @@ int main(int argc, char *argv[])
     // Initilize the server
     initServer(serverSock, atoi(argv[1]));
 
-    // Clear the socket sets
+    // Clear the socket setsck.count(sock) == 0){
+      |                                 ^~~~
+make: *** [Makefile:7: Server] Error 1
+
     FD_ZERO(&recvSockSet);
 
     // Add the listening socket to the set
@@ -69,7 +72,10 @@ int main(int argc, char *argv[])
     maxDesc = std::max(maxDesc, serverSock);
 
     // Run the server until a "terminate" command is received)
-    while (!terminated)
+    while (!terminated)ck.count(sock) == 0){
+      |                                 ^~~~
+make: *** [Makefile:7: Server] Error 1
+
     {
 
         // copy the receive descriptors to the working set
@@ -308,7 +314,7 @@ void print_wait(bool enough, float time){
               "Current players in queue: ";
     }
     for (int i = 0; i < maxDesc; i++){
-        if (assigned_sock.count(sock) == 0){
+        if (assigned_sock.count(i) == 0){
             continue;
         }
         msg = msg + players[i].player_name + " ";
