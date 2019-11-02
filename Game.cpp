@@ -100,4 +100,3 @@ void check(int sock_no, std::string typed){
     }
 }
 
-
