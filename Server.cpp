@@ -197,6 +197,8 @@ void processSockets (fd_set readySocks)
 //                        sendData(sock, (char *) &length, sizeof(length));
 //                        sendData(sock, (char *) send_msg.c_str(), length);
 //                    }
+//                }else{
+//                        print_wait(0, sec);
 //                }
 //            }
 //        }
@@ -271,6 +273,11 @@ void askName(int sock, char * buffer){
             break;
         }
         int  i = 0;
+
+        for (i = 0; i < maxDesc; i++){
+            if (assigned_sock.count(sock) == 0){
+                continue;
+            }
         for (i = 0; i < get_num_players(); i++){
             std::cout << "Socket = " << players[i].socket << std::endl;
             std::cout << "Name = " << players[i].player_name << std::endl;
