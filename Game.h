@@ -11,4 +11,5 @@ struct player get_player(int sock_no);
 int get_num_players();
 void start_game(int num);
 void check(int sock_no, std::string typed);
+void finish_game();
 //std::unordered_map<int, int> get_players();
