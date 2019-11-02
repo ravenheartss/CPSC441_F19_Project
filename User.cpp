@@ -71,28 +71,31 @@ int main(int argc, char * argv[]) {
     while (!quit) {
         // Clear the buffers
 
-//        std::cout << "#1" << std::endl;
+        std::cout << "#1" << std::endl;
         total_size = 0;
         memset(&outBuffer, 0, BUFFERSIZE);
         memset(&inBuffer, 0, BUFFERSIZE);
+        bytesRecv = 0;
         bytesRecv = recv(socket_desc, (unsigned char *) &total_size, sizeof(size_t), 0);
 
         if (bytesRecv <= 0) {
             std::cout << "Error in receiving message from server. Try restarting the game" << std::endl;
         }
-
-        while (bytesRecv < total_size && bytesRecv > 0) {
-            bytesRecv += recv(socket_desc, (char *) inBuffer, BUFFERSIZE, 0);
+        
+        bytesRecv = 0;
+        while (bytesRecv < total_size) {
+            bytesRecv += recv(socket_desc, (char *) inBuffer, total_size, 0);
             std::cout << inBuffer;
         }
 
         if (bytesRecv <= 0) {
             std::cout << "Error in receiving message from server. Try restarting the game" << std::endl;
         }
-        if (strncmp(std::string(inBuffer).substr(total_size-2, total_size).c_str(), ": ", 2) != 0){
-            std::cout << std::string(inBuffer).substr(total_size-3, total_size).c_str() << std::endl;
+
+        if (std::string(inBuffer).find_last_of(":") == std::string::npos){
             continue;
         }
+        
         fgets(outBuffer, BUFFERSIZE, stdin);
         total_size = strlen(outBuffer);
 

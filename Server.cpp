@@ -20,7 +20,6 @@
 #include "Server.h"
 #include <cstdio>
 #include <ctime>
-//#include <time.h>
 
 
 const int BUFFERSIZE = 512;   // Size the message buffers
@@ -39,6 +38,7 @@ extern std::unordered_map <int, struct player> players;
 extern std::unordered_map <int, struct player> queue;
 extern bool inGame;
 std::unordered_set <int> assigned_sock;
+std::unordered_set<int>::iterator it;
 
 void initServer (int&, int port);
 void processSockets (fd_set);
@@ -105,9 +105,10 @@ int main(int argc, char *argv[])
             if (get_num_players() == 1){
                 timeout_start = std::clock();
             }
-            std::clock_t time = timeout_start-std::clock();
+
+            std::clock_t time = std::clock() - timeout_start;
             float sec = ((float) time)/CLOCKS_PER_SEC;
-            print_wait(1, sec);
+            print_wait(1, timeout-sec);
         }else{
             processSockets(tempRecvSockSet);
         }
@@ -172,42 +173,20 @@ void processSockets (fd_set readySocks)
         if (players.count(sock) != 1){
             continue;
         }
-    //    if (!inGame){
-//            timeout_start = timeout_start-std::clock();
-//            float sec = ((float) timeout_start)/CLOCKS_PER_SEC;
-//            if ( sec >= (float)timeout){
-//                timeout_start = clock();
-//                if (get_num_players() > 1){
-//                    for (int i = 0; i < maxDesc; i++){
-//                        if (players.find(i) == find.end()){
-//                            continue;
-//                        }
-//                        std::string send_msg = "Starting game in 5 seconds";
-//                        length = send_msg.length();
-//                        sendData(sock, (char *) &length, sizeof(length));
-//                        sendData(sock, (char *) send_msg.c_str(), length);
-//                        sleep(3);
-//                        send_msg = "Starting game in 2 seconds";
-//                        length = send_msg.length();
-//                        sendData(sock, (char *) &length, sizeof(length));
-//                        sendData(sock, (char *) send_msg.c_str(), length);
-//                        sleep(2);
-//                    }
-
-//                    for (int i = sock; i < maxDesc; i++) {
-//                        if (socks.count(sock) != 1) {
-//                            continue;
-//                        }
-//                        std::string send_msg;
-//                        send_msg = "Starting game...";
-//                        length = send_msg.length();
-//                        sendData(sock, (char *) &length, sizeof(length));
-//                        sendData(sock, (char *) send_msg.c_str(), length);
-//                    }
-//                }else{
-//                        print_wait(0, sec);
-//            }
-//        }
+        if (!inGame){
+            timeout_start = std::clock() - timeout_start;
+            float sec = ((float) timeout_start)/CLOCKS_PER_SEC;
+            if ( sec >= (float)timeout){
+                timeout_start = clock();
+                if (get_num_players() > 1){
+                	sendAll("Starting game...");
+                	inGame = 1;
+                	start_game();
+                }else{
+                    print_wait(0, sec);
+                    timeout_start = std::clock();
+            }
+        }
 
         if (FD_ISSET(sock, &readySocks) == 0){
             continue;
@@ -264,7 +243,7 @@ void askName(int sock, char * buffer){
     length = 0;
     while(length > 12 || length <= 0){
         bytesRecv = 0;
-        recv(sock, (unsigned char *) &length, sizeof(length), 0);
+        bytesRecv = recv(sock, (unsigned char *) &length, sizeof(length), 0);
         receiveData(sock, buffer, size);
         if (length > 12 || length <= 0) {
             msg_send = "Please enter a valid and unique name (at most 12 characters): ";
@@ -278,16 +257,14 @@ void askName(int sock, char * buffer){
             add_player(sock, std::string(buffer));
             break;
         }
-        int  i = 0;
-        for (i = 0; i < maxDesc; i++){
-            if (assigned_sock.count(sock) == 0){
-                continue;
-            }
-            if (std::string(buffer).compare(players[i].player_name) == 0){
+        
+        for (it = assigned_sock.begin(); it != assigned_sock.end(); it++){
+            if (std::string(buffer).compare(players[*it].player_name) == 0){
                 break;
             }
         }
-        if (i == get_num_players()){
+        
+        if (it == assigned_sock.end()){
             add_player(sock, std::string(buffer));
             break;
         }
@@ -306,13 +283,11 @@ void print_wait(bool enough, float time){
               "Approximate wait time before game starts: 60 seconds\nWaiting for additional players\n\n"
               "Current players in queue: ";
     }
-    for (int i = 0; i < maxDesc; i++){
-        if (assigned_sock.count(i) == 0){
-            continue;
-        }
-        msg = msg + players[i].player_name + " ";
+    for (it = assigned_sock.begin(); it != assigned_sock.end(); it++){
+        msg = msg + players[*it].player_name + " ";
     }
     sendAll(msg);
+    
     return;
 }
 
@@ -326,17 +301,20 @@ void send_new_name(std::string name){
 
 
 void sendAll(std::string toall){
+
     length = toall.length();
-    for (int sock = 0; sock < maxDesc; sock++){
-        if (assigned_sock.count(sock) == 0){
-            continue;
-        }
-        sendData(sock, (char *) &length, sizeof(length));
-        sendData(sock, (char *) toall.c_str(), length);
-    }
+    it = assigned_sock.begin();
+	while (it != assigned_sock.end())
+	{
+		sendData(*it, (char *) &length, sizeof(length));
+		sendData(*it, (char *) toall.c_str(), length);
+		it++;
+	}
+	
     return;
 
 }
+
 void recv_length(int sock,size_t len_string, char * buffer){
     recv(sock, (unsigned char *) &len_string, sizeof(len_string), 0);
     int size;
