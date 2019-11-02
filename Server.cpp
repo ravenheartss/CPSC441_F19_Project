@@ -45,7 +45,7 @@ void processSockets (fd_set);
 void askName(int sock, char * buffer);
 void print_wait(bool enough, float time);
 void send_new_name(std::string name);
-void sendAll(std::string toall);
+
 
 int main(int argc, char *argv[])
 {
@@ -335,4 +335,10 @@ void sendAll(std::string toall){
         sendData(sock, (char *) toall.c_str(), length);
     }
     return;
+
+}
+void recv_length(int sock,size_t len_string, char * buffer){
+    recv(sock, (unsigned char *) &len_string, sizeof(len_string), 0);
+    int size;
+    receiveData(sock, buffer, size);
 }
