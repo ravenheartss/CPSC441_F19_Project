@@ -90,7 +90,13 @@ void start_game(int num){
     std::string word = "Type: " + get_word(-1);
 //    for (int i = 0; i++; )
     start = std::clock();
-//    game_loop();
+    game_loop();
+}
+
+void game_loop(){
+    sendAll("Game Starting")
+
+
 }
 
 void check(int sock_no, std::string typed){
