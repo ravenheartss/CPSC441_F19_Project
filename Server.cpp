@@ -60,10 +60,6 @@ int main(int argc, char *argv[])
     // Initilize the server
     initServer(serverSock, atoi(argv[1]));
 
-    // Clear the socket setsck.count(sock) == 0){
-      |                                 ^~~~
-make: *** [Makefile:7: Server] Error 1
-
     FD_ZERO(&recvSockSet);
 
     // Add the listening socket to the set
@@ -72,11 +68,7 @@ make: *** [Makefile:7: Server] Error 1
     maxDesc = std::max(maxDesc, serverSock);
 
     // Run the server until a "terminate" command is received)
-    while (!terminated)ck.count(sock) == 0){
-      |                                 ^~~~
-make: *** [Makefile:7: Server] Error 1
-
-    {
+    while (!terminated){
 
         // copy the receive descriptors to the working set
         memcpy(&tempRecvSockSet, &recvSockSet, sizeof(recvSockSet));
@@ -99,8 +91,9 @@ make: *** [Makefile:7: Server] Error 1
             unsigned int size = sizeof(clientAddr);
 
             // Establish a connection
-            if ((clientSock = accept(serverSock, (struct sockaddr *) &clientAddr, &size)) < 0)
+            if ((clientSock = accept(serverSock, (struct sockaddr *) &clientAddr, &size)) < 0){
                 break;
+            }
             std::cout << "Accepted a connection from " << inet_ntoa(clientAddr.sin_addr) << ":" << clientAddr.sin_port << std::endl;
 
             // Add the new connection to the receive socket set
@@ -179,7 +172,7 @@ void processSockets (fd_set readySocks)
         if (players.count(sock) != 1){
             continue;
         }
-//        if (!inGame){
+    //    if (!inGame){
 //            timeout_start = timeout_start-std::clock();
 //            float sec = ((float) timeout_start)/CLOCKS_PER_SEC;
 //            if ( sec >= (float)timeout){
