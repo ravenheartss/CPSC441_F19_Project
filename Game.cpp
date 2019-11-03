@@ -19,16 +19,27 @@
 #include <cstdio>
 #include <ctime>
 #include <utility>
+#include <signal.h>
+#include <algorithm>
 
 std::unordered_map <int, struct player> players;
 std::unordered_map <int, struct player> queue;
+std::unordered_map <int, struct player> quit_players;
 std::vector <struct player *> for_sorting;
+std::vector <struct player *>::iterator it1;
+
 
 bool inGame = false;
 std::vector<std::string> word_list;
 std::clock_t start;
 double total_time;
 size_t len = 0;
+
+bool descending (const player &struct1, const player &struct2){
+
+    return (struct1.rate > struct2.rate);
+
+}
 
 void add_player(int sock_no, std::string name){
     struct player info;
@@ -38,15 +49,23 @@ void add_player(int sock_no, std::string name){
     info.rate = 0;
     info.player_name = name;
     if (!inGame) {
-        players.insert(std::make_pair(sock_no, info));
-        for_sorting.push_back(&players[sock_no]);
+        players[sock_no] = info;
+        struct player *toadd = &info;
+        for_sorting.push_back(toadd);
     }else{
-        queue.insert(std::make_pair(sock_no, info));
+        queue[sock_no] = info;
     }
-    std::cout << "Players smake ize == " << get_num_players() << std::endl;
 }
 
 void delete_player(int sock_no){
+    quit_players.[sock_no] = players[sock_no];
+    for (it1 = for_sorting.begin(); it1 != for_sorting.end(); it1++){
+        struct player *me = *it1;
+        if (me->socket == sock_no){
+            for_sorting.erase(it1);
+            break;
+        }
+    }
     players.erase(sock_no);
     queue.erase(sock_no);
 }
@@ -68,10 +87,6 @@ std::unordered_map <int, struct player> get_players(){
     return players;
 }
 
-void generate_words(int num){
-    generate_random(num, word_list);
-}
-
 void clear_list(){
     word_list.clear();
 }
@@ -82,17 +97,33 @@ int get_num_players(){
 }
 
 void start_game(int num){
-
-    generate_words(num);
-
+    //inGame = true;
+    std::cout << "Before generate" << std::endl;
+    word_list=generate_random(num);
+    std::cout << "after generate words before print list" << std::endl;
+    for (int i=0; i<word_list.size(); i++){
+        std::cout << word_list[i] << std::endl;
+    }
+    std::cout << "after generate" << std::endl;
     std::string word = "Type: " + get_word(-1);
 //    for (int i = 0; i++; )
     start = std::clock();
-//    game_loop();
+    game_loop();
+
 }
 
 void game_loop(){
-    sendAll("Game Starting");
+//    sendAll("Game Starting");
+//    sendAll(word_list[0]);
+    for (auto player : players){
+        int playersock = player.first;
+        std::cout << "did it make it here? lets test" << std::endl;
+        send(word_list[1],playersock);
+    }
+}
+
+void finish_game(){
+    kill(0,SIGKILL);
 }
 
 void check(int sock_no, std::string typed){
@@ -104,10 +135,11 @@ void check(int sock_no, std::string typed){
 
 void display(int sock){
 	std::string fmt = "Rank  Name          Speed    Errors\n\n";
-    len = fmt.length();
-    sendData(sock, (char *) &len, sizeof(len));
-    sendData(sock, (char *) fmt.c_str(), len);
-    
+    send(fmt, sock);
 }
+
+//void sort_ranks(){
+//    sort(for_sorting.begin(), for_sorting.end(), descending);
+//}
 
 

@@ -9,7 +9,9 @@
 #include <vector>
 std::string out_file = "temp_output.txt";
 
-void generate_random(int n_words, std::vector <std::string> list){
+std::vector <std::string> generate_random(int n_words){
+
+    std::vector <std::string> list;
     std::string temp = std::to_string(n_words);
 //    const char * args[] = {"shuf", "-n", temp, "/usr/share/dict/words", nullptr};
     std::string command = "shuf -n" + temp + " /usr/share/dict/words >> " + out_file;
@@ -26,5 +28,6 @@ void generate_random(int n_words, std::vector <std::string> list){
     infile.close();
     command = "rm -f " + out_file;
     system(command.c_str());
+    return list;
 }
 
