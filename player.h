@@ -8,4 +8,6 @@ struct player{
     int pos;
     int rate;
     int n_typed;
+    int errors;
+    int characters;
 };

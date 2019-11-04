@@ -41,6 +41,7 @@ extern bool inGame;
 
 std::unordered_set <int> assigned_sock;
 std::unordered_set<int>::iterator it;
+std::unordered_map <int, struct player>::iterator qit;
 
 void initServer (int&, int port);
 void processSockets (fd_set);
@@ -274,18 +275,26 @@ void askName(int sock, char * buffer){
 
 void print_wait(bool enough, float time){
     std::string msg;
-    if (enough){
-       msg = "Approximate wait time before game starts =" + std::to_string(time) + " seconds\nWaiting for additional players\n\n"
-              "Current players in queue = ";
+    if (!inGame) {
+        if (enough) {
+            msg = "Approximate wait time before game starts =" + std::to_string(time) +
+                  " seconds\nWaiting for additional players\n\n"
+                  "Current players in queue = ";
+        } else {
+            msg = "Not enough players to start a game. At least 2 players required.\n 1 minute timer will reset.\n"
+                  "Approximate wait time before game starts: 60 seconds\nWaiting for additional players\n\n"
+                  "Current players in queue = ";
+        }
+
+        for (it = assigned_sock.begin(); it != assigned_sock.end(); it++) {
+            msg = msg + players[*it].player_name + " ";
+        }
     }else{
-        msg = "Not enough players to start a game. At least 2 players required.\n 1 minute timer will reset.\n"
-              "Approximate wait time before game starts: 60 seconds\nWaiting for additional players\n\n"
-              "Current players in queue = ";
-    }
-    for (it = assigned_sock.begin(); it != assigned_sock.end(); it++){
-//        std::cout << *it << std::endl;
-//        std::cout << players[*it].player_name << std::endl;
-        msg = msg + players[*it].player_name + " ";
+        msg = "Game in progress. Please wait for the current game to complete.\nApproximate wait time for the current game to complete = "
+                + std::to_string(get_time_remaining()) + "\nPlayers in the queue for the next game = ";
+        for (qit = queue.begin(); qit != queue.end(); qit++){
+            msg = msg + qit->second.player_name + " ";
+        }
     }
     sendAll(msg);
     
@@ -293,7 +302,12 @@ void print_wait(bool enough, float time){
 }
 
 void send_new_name(std::string name){
-    std::string msg = name + " has joined the the game.\n";
+    std::string msg;
+    if (!inGame) {
+        msg = name + " has joined the the game.\n";
+    }else{
+        msg = name + " has joined the the queue.\n";
+    }
     sendAll(msg);
     std::clock_t time = std::clock() - timeout_start;
     float sec = ((float) time)/CLOCKS_PER_SEC;

@@ -12,4 +12,5 @@ void start_game(int num);
 void check(int sock_no, std::string typed);
 void finish_game();
 void game_loop();
+float get_time_remaining();
 //std::unordered_map<int, int> get_players();

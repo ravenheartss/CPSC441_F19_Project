@@ -27,17 +27,21 @@ std::unordered_map <int, struct player> queue;
 std::unordered_map <int, struct player> quit_players;
 std::vector <struct player *> for_sorting;
 std::vector <struct player *>::iterator it1;
+std::unordered_map <int, struct player>::iterator it2;
 
 
 bool inGame = false;
 std::vector<std::string> word_list;
 std::clock_t start;
-double total_time;
+float total_time = 180.0;
 size_t len = 0;
 
-bool descending (const player &struct1, const player &struct2){
+void sort_ranks();
+void display_all();
+void display(int sock);
+bool descending (const player *struct1, const player *struct2){
 
-    return (struct1.rate > struct2.rate);
+    return (struct1->rate > struct2->rate);
 
 }
 
@@ -47,6 +51,8 @@ void add_player(int sock_no, std::string name){
     info.n_typed = 0;
     info.pos = 0;
     info.rate = 0;
+    info.characters = 0;
+    info.errors = 0;
     info.player_name = name;
     if (!inGame) {
         players[sock_no] = info;
@@ -58,7 +64,7 @@ void add_player(int sock_no, std::string name){
 }
 
 void delete_player(int sock_no){
-    quit_players.[sock_no] = players[sock_no];
+    quit_players[sock_no] = players[sock_no];
     for (it1 = for_sorting.begin(); it1 != for_sorting.end(); it1++){
         struct player *me = *it1;
         if (me->socket == sock_no){
@@ -112,9 +118,11 @@ void start_game(int num){
 
 }
 
-void game_loop(){
+void game_loop()
+{
 //    sendAll("Game Starting");
 //    sendAll(word_list[0]);
+    while (get_time_remaining() < 180)
     for (auto player : players){
         int playersock = player.first;
         std::cout << "did it make it here? lets test" << std::endl;
@@ -123,7 +131,11 @@ void game_loop(){
 }
 
 void finish_game(){
-    kill(0,SIGKILL);
+    display_all();
+    players.clear();
+    quit_players.clear();
+
+    kill(getpid(),SIGKILL);
 }
 
 void check(int sock_no, std::string typed){
@@ -134,12 +146,61 @@ void check(int sock_no, std::string typed){
 }
 
 void display(int sock){
+    sort_ranks();
 	std::string fmt = "Rank  Name          Speed    Errors\n\n";
+    send(fmt, sock);
+    fmt = "";
+    int i = 1;
+    for (it1 = for_sorting.begin(); it1 != for_sorting.end(); it2++){
+        fmt = fmt + std::to_string(i) + ")" + "    " + (*it1)->player_name;
+        int j = 14 - (*it1)->player_name.length();
+        while( j != 0){
+            fmt += " ";
+            j++;
+        }
+        fmt += std::to_string((*it1)->rate);
+        j = 9 - std::to_string((*it1)->rate).length();
+        while(j != 0){
+            fmt += " ";
+            j++;
+        }
+        fmt += std::to_string((*it1)->errors) + "\n";
+    }
     send(fmt, sock);
 }
 
-//void sort_ranks(){
-//    sort(for_sorting.begin(), for_sorting.end(), descending);
-//}
+void display_all(){
+    sort_ranks();
+    std::string fmt = "Rank  Name          Speed    Errors\n\n";
+    sendAll(fmt);
+    fmt = "";
+    int i = 1;
+    for (it1 = for_sorting.begin(); it1 != for_sorting.end(); it2++){
+        fmt = fmt + std::to_string(i) + ")" + "    " + (*it1)->player_name;
+        int j = 14 - (*it1)->player_name.length();
+        while( j != 0){
+            fmt += " ";
+            j++;
+        }
+        fmt += std::to_string((*it1)->rate);
+        j = 9 - std::to_string((*it1)->rate).length();
+        while(j != 0){
+            fmt += " ";
+            j++;
+        }
+        fmt += std::to_string((*it1)->errors) + "\n";
+    }
+    sendAll(fmt);
+}
+
+void sort_ranks(){
+    sort(for_sorting.begin(), for_sorting.end(), descending);
+}
+
+float get_time_remaining(){
+    std::clock_t diff = std::clock() - start;
+    float elapsed = (float)diff/CLOCKS_PER_SEC;
+    return elapsed;
+}
 
 
