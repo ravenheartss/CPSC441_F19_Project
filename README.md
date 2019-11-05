@@ -2,12 +2,10 @@ UofC CPSC441_F19 Project Group 3
 
 TODO:
 
-2. Timer
-3. Game Loop
-5. Game over -- disconnect all players
-6. Display gamestate
-7. Calculate rate
-
+1. Game over -- disconnect all players
+2. Calculate rate
+3. Receiving not working during game from "Game.cpp"
+4. Clean-up
 
 ADMIN
 
