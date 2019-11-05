@@ -4,3 +4,4 @@
 void sendAll(std::string toall);
 void recv_length(int sock,size_t len_string, char * buffer);
 void send(std::string msg, int sock);
+void receiveData (int sock, char* inBuffer, int& size);

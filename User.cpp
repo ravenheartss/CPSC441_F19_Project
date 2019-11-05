@@ -70,8 +70,6 @@ int main(int argc, char * argv[]) {
 
     while (!quit) {
         // Clear the buffers
-
-        std::cout << "#1" << std::endl;
         total_size = 0;
         memset(&outBuffer, 0, BUFFERSIZE);
         memset(&inBuffer, 0, BUFFERSIZE);

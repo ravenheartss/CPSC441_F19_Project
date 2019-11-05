@@ -30,8 +30,7 @@ int maxDesc = 0;      // The max descriptor
 bool terminated = false;
 size_t length = 0;
 int bytesRecv;
-int nyes = -1;
-float timeout_game = 60.0;
+float timeout_game = 10.0;
 std::clock_t timeout_start;
 
 extern std::unordered_map <int, struct player> players;
@@ -41,6 +40,7 @@ extern bool inGame;
 
 std::unordered_set <int> assigned_sock;
 std::unordered_set<int>::iterator it;
+std::unordered_set<int>::iterator iter;
 std::unordered_map <int, struct player>::iterator qit;
 
 void initServer (int&, int port);
@@ -49,7 +49,7 @@ void askName(int sock, char * buffer);
 void print_wait(bool enough, float time);
 void send_new_name(std::string name);
 void sendData (int sock, char* buffer, int size);
-void receiveData (int sock, char* inBuffer, int& size);
+
 
 int main(int argc, char *argv[])
 {
@@ -89,6 +89,7 @@ int main(int argc, char *argv[])
         }
 
         // First, process new connection request, if any.
+
         if (FD_ISSET(serverSock, &tempRecvSockSet))
         {
             // set the size of the client address structure
@@ -112,7 +113,11 @@ int main(int argc, char *argv[])
                 print_wait(1, timeout_game);
             }
         }else{
-            processSockets(tempRecvSockSet);
+            if (!inGame){
+                processSockets(tempRecvSockSet);
+            }else{
+                sleep(120);
+            }
         }
     }
 
@@ -164,21 +169,23 @@ void initServer(int& serverSock, int port)
 
 void processSockets (fd_set readySocks)
 {
-    char* buffer = new char[BUFFERSIZE];       // Buffer for the message from the server
-    int size;                                    // Actual size of the message
+//    char* buffer = new char[BUFFERSIZE];       // Buffer for the message from the server
+//    int size;                                    // Actual size of the message
     // Loop through the descriptors and process
-    for (it = assigned_sock.begin(); it != assigned_sock.end(); it++)
+    for (it = assigned_sock.begin(); it != assigned_sock.end(); ++it)
     {
         int sock = *it;
         if (!inGame){
-            timeout_start = std::clock() - timeout_start;
-            float sec = ((float) timeout_start)/CLOCKS_PER_SEC;
+            std::clock_t temp = std::clock() - timeout_start;
+            float sec = ((float) temp)/CLOCKS_PER_SEC;
             if ( sec >= timeout_game){
-                timeout_start = clock();
                 if (get_num_players() > 1){
                     inGame = 1;
                 	sendAll("Starting game...");
-                	start_game(200);
+                	pid_t pid = fork();
+                	if (pid == 0){
+                        start_game(200, readySocks);
+                    }
                 }else {
                     print_wait(0, sec);
                     timeout_start = std::clock();
@@ -186,18 +193,9 @@ void processSockets (fd_set readySocks)
             }
         }
 
-        if (FD_ISSET(sock, &readySocks) == 0){
-            continue;
-        }
-
-        length = recv(sock, (unsigned char *) &length, sizeof(length), 0);
-        receiveData(sock, buffer, size);
-        length = 0;
-        memset(buffer, 0, BUFFERSIZE);
-
     }
 
-    delete[] buffer;
+//    delete[] buffer;
 }
 
 void receiveData (int sock, char* inBuffer, int& size){
@@ -231,6 +229,7 @@ void sendData (int sock, char* buffer, int size)
 }
 
 void askName(int sock, char * buffer){
+
     length = 0;
     int size;
     std::string msg_send = "Please enter your name: ";
@@ -257,24 +256,28 @@ void askName(int sock, char * buffer){
             break;
         }
         
-        for (it = assigned_sock.begin(); it != assigned_sock.end(); it++){
-            if (name.compare(players[*it].player_name) == 0){
+        for (qit = players.begin(); qit != players.end(); qit++){
+            if (name.compare(qit->second.player_name) == 0){
                 break;
             }
         }
         
-        if (it == assigned_sock.end()){
+        if (qit == players.end()){
             add_player(sock, name);
             send_new_name(name);
             break;
         }
         length = 0;
+        msg_send = "Please enter a valid and unique name (at most 12 characters): ";
+        send(msg_send, sock);
+        continue;
     }
     return;
 }
 
 void print_wait(bool enough, float time){
-    std::string msg;
+    std::unordered_map <int, struct player>::iterator names;
+    std::string msg = "";
     if (!inGame) {
         if (enough) {
             msg = "Approximate wait time before game starts =" + std::to_string(time) +
@@ -286,19 +289,18 @@ void print_wait(bool enough, float time){
                   "Current players in queue = ";
         }
 
-        for (it = assigned_sock.begin(); it != assigned_sock.end(); it++) {
-            msg = msg + players[*it].player_name + " ";
+        for (names = players.begin(); names != players.end(); names++) {
+            msg = msg + names->second.player_name + " ";
         }
     }else{
         msg = "Game in progress. Please wait for the current game to complete.\nApproximate wait time for the current game to complete = "
                 + std::to_string(get_time_remaining()) + "\nPlayers in the queue for the next game = ";
-        for (qit = queue.begin(); qit != queue.end(); qit++){
-            msg = msg + qit->second.player_name + " ";
+        for (names = queue.begin(); names != queue.end(); names++){
+            msg = msg + names->second.player_name + " ";
         }
     }
+    msg += "\n\n";
     sendAll(msg);
-    
-    return;
 }
 
 void send_new_name(std::string name){
@@ -318,15 +320,14 @@ void send_new_name(std::string name){
 void sendAll(std::string toall){
 
     length = toall.length();
-    it = assigned_sock.begin();
-	while (it != assigned_sock.end())
+
+    for (iter = assigned_sock.begin(); iter != assigned_sock.end(); iter++)
 	{
-		sendData(*it, (char *) &length, sizeof(length));
-		sendData(*it, (char *) toall.c_str(), length);
-		it++;
-	}
-	
-    return;
+        int sock = *iter;
+		sendData(sock, (char *) &length, sizeof(length));
+		sendData(sock, (char *) toall.c_str(), length);
+    }
+
 }
 
 void send(std::string msg, int sock)
@@ -334,13 +335,11 @@ void send(std::string msg, int sock)
     length = msg.length();
     sendData(sock, (char *) &length, sizeof(length));
     sendData(sock, (char *) msg.c_str(), length);
-    return;
 }
 
-void recv_length(int sock,size_t len_string, char * buffer)
+void recv_length(int sock, size_t len_string, char * buffer)
 {
     recv(sock, (unsigned char *) &len_string, sizeof(len_string), 0);
     int size;
     receiveData(sock, buffer, size);
-    return;
 }

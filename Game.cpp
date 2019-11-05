@@ -11,6 +11,8 @@
 #include <fstream>
 #include <algorithm>
 #include <vector>
+#include <sys/select.h>
+#include <sys/types.h>
 #include "player.h"
 #include "Game.h"
 #include <unordered_map>
@@ -21,6 +23,8 @@
 #include <utility>
 #include <signal.h>
 #include <algorithm>
+
+#define BUFFERSIZE 512
 
 std::unordered_map <int, struct player> players;
 std::unordered_map <int, struct player> queue;
@@ -36,9 +40,7 @@ std::clock_t start;
 float total_time = 180.0;
 size_t len = 0;
 
-void sort_ranks();
-void display_all();
-void display(int sock);
+
 bool descending (const player *struct1, const player *struct2){
 
     return (struct1->rate > struct2->rate);
@@ -84,7 +86,6 @@ std::string get_word(int sock_no){
         players[sock_no].pos = 0;
         return word_list[0];
     }else{
-        players[sock_no].pos += 1;
         return word_list[players[sock_no].pos];
     }
 }
@@ -102,31 +103,38 @@ int get_num_players(){
     return players.size();
 }
 
-void start_game(int num){
+void start_game(int num, fd_set readySocks)
+{
     //inGame = true;
-    std::cout << "Before generate" << std::endl;
+//    std::cout << "Before generate" << std::endl;
     word_list=generate_random(num);
-    std::cout << "after generate words before print list" << std::endl;
-    for (int i=0; i<word_list.size(); i++){
-        std::cout << word_list[i] << std::endl;
-    }
-    std::cout << "after generate" << std::endl;
-    std::string word = "Type: " + get_word(-1);
+//    std::cout << "after generate words before print list" << std::endl;
+//    for (int i=0; i<word_list.size(); i++){
+//        std::cout << word_list[i] << std::endl;
+//    }
+//    std::cout << "after generate" << std::endl;
+//    std::string word = "Type: " + get_word(-1);
 //    for (int i = 0; i++; )
-    start = std::clock();
-    game_loop();
+
+    game_loop(readySocks);
 
 }
 
-void game_loop()
+void game_loop(fd_set readySocks)
 {
-//    sendAll("Game Starting");
-//    sendAll(word_list[0]);
-    while (get_time_remaining() < 180)
-    for (auto player : players){
-        int playersock = player.first;
-        std::cout << "did it make it here? lets test" << std::endl;
-        send(word_list[1],playersock);
+//    while (get_time_remaining() < 180)
+//    for (auto player : players){
+//        int playersock = player.first;
+////        std::cout << "did it make it here? lets test" << std::endl;
+//        send(word_list[1],playersock);
+//    }
+    sendAll("Game starting");
+    display_all();
+    std::string first_word = "\nType: " + get_word(-1) + "\n";
+    sendAll(first_word);
+    start = std::clock();
+    while (get_time_remaining() < 180){
+        monitor_sockets(readySocks);
     }
 }
 
@@ -145,9 +153,11 @@ void check(int sock_no, std::string typed){
     }
 }
 
+
 void display(int sock){
     sort_ranks();
-	std::string fmt = "Rank  Name          Speed    Errors\n\n";
+    std::string fmt = "Time Remaining = " + std::to_string(get_time_remaining());
+	fmt += "Rank  Name          Speed    Errors\n\n";
     send(fmt, sock);
     fmt = "";
     int i = 1;
@@ -170,25 +180,28 @@ void display(int sock){
 }
 
 void display_all(){
+    std::unordered_map <int, struct player>::iterator temp;
     sort_ranks();
-    std::string fmt = "Rank  Name          Speed    Errors\n\n";
+    std::string fmt = "Time Remaining = " + std::to_string(get_time_remaining());
+    fmt += "\n\nRank  Name          Speed    Errors\n\n";
     sendAll(fmt);
     fmt = "";
     int i = 1;
-    for (it1 = for_sorting.begin(); it1 != for_sorting.end(); it2++){
-        fmt = fmt + std::to_string(i) + ")" + "    " + (*it1)->player_name;
-        int j = 14 - (*it1)->player_name.length();
+    for (temp = players.begin(); temp != players.end(); temp++){
+        fmt = fmt + std::to_string(i) + ")" + "    " + temp->second.player_name;
+        int j = 14 - temp->second.player_name.length();
         while( j != 0){
             fmt += " ";
-            j++;
+            j--;
         }
-        fmt += std::to_string((*it1)->rate);
-        j = 9 - std::to_string((*it1)->rate).length();
+        fmt += std::to_string(temp->second.rate);
+        j = 9 - std::to_string(temp->second.rate).length();
         while(j != 0){
             fmt += " ";
-            j++;
+            j--;
         }
-        fmt += std::to_string((*it1)->errors) + "\n";
+        fmt += std::to_string(temp->second.errors) + "\n";
+        i++;
     }
     sendAll(fmt);
 }
@@ -200,7 +213,37 @@ void sort_ranks(){
 float get_time_remaining(){
     std::clock_t diff = std::clock() - start;
     float elapsed = (float)diff/CLOCKS_PER_SEC;
-    return elapsed;
+    return (total_time - elapsed);
 }
+
+void monitor_sockets(fd_set readySocks){
+    char * buff = new char[BUFFERSIZE];
+    std::string input;
+    int size;
+    int br;
+    for (it2 = players.begin(); it2 != players.end(); it2++)
+    {
+        /*
+         * THIS PART IS NOT WORKING!!!!!!!!!!
+         */
+        int sock = it2->second.socket;
+        if(!FD_ISSET(sock, &readySocks)){
+            continue;
+        }
+        memset(buff, 0, BUFFERSIZE);
+        br = 0;
+        br = recv(sock, (unsigned char *) &len, sizeof(len), 0);
+        receiveData(sock, buff, size);
+        std::cout << "YAYYYYY!!!!!!" << std::endl;
+        input = std::string(buff);
+        input.erase(std::remove(input.begin(), input.end(), '\n'),input.end());
+        check(sock, input);
+        display(sock);
+        input = "Type: " + get_word(sock) + "\n";
+        send(input, sock);
+    }
+    delete[] buff;
+}
+
 
 
