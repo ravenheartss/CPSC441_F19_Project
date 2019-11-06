@@ -20,7 +20,7 @@
 #include "Server.h"
 #include <cstdio>
 #include <ctime>
-
+#include <pthread.h>
 
 const int BUFFERSIZE = 512;   // Size the message buffers
 const int MAXPENDING = 10;    // Maximum pending connections
@@ -106,18 +106,15 @@ int main(int argc, char *argv[])
             maxDesc = std::max(maxDesc, clientSock);
 
             char * buffer = new char[BUFFERSIZE];
-            assigned_sock.insert(clientSock);
+//            assigned_sock.insert(clientSock);
+            add_player(clientSock, "Shankar");
             askName(clientSock, buffer);
             if (get_num_players() == 1){
                 timeout_start = std::clock();
                 print_wait(1, timeout_game);
             }
         }else{
-            if (!inGame){
-                processSockets(tempRecvSockSet);
-            }else{
-                sleep(120);
-            }
+            processSockets(tempRecvSockSet);
         }
     }
 
@@ -169,12 +166,13 @@ void initServer(int& serverSock, int port)
 
 void processSockets (fd_set readySocks)
 {
-//    char* buffer = new char[BUFFERSIZE];       // Buffer for the message from the server
-//    int size;                                    // Actual size of the message
+    char* buffer = new char[BUFFERSIZE];       // Buffer for the message from the server
+    int size;
+    int br;// Actual size of the message
     // Loop through the descriptors and process
-    for (it = assigned_sock.begin(); it != assigned_sock.end(); ++it)
+    for (it = assigned_sock.begin(); it != assigned_sock.end(); it++)
     {
-        int sock = *it;
+
         if (!inGame){
             std::clock_t temp = std::clock() - timeout_start;
             float sec = ((float) temp)/CLOCKS_PER_SEC;
@@ -195,7 +193,7 @@ void processSockets (fd_set readySocks)
 
     }
 
-//    delete[] buffer;
+    delete[] buffer;
 }
 
 void receiveData (int sock, char* inBuffer, int& size){
@@ -252,6 +250,7 @@ void askName(int sock, char * buffer){
             continue;
         }
         if (get_num_players() == 0){
+            assigned_sock.insert(sock);
             add_player(sock, name);
             break;
         }
@@ -263,6 +262,7 @@ void askName(int sock, char * buffer){
         }
         
         if (qit == players.end()){
+            assigned_sock.insert(sock);
             add_player(sock, name);
             send_new_name(name);
             break;

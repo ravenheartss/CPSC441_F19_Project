@@ -4,11 +4,10 @@ User: User.cpp
 	g++ -g -std=c++11 -o User User.cpp
 
 Server: Server.cpp wrdgen.cpp Game.cpp
-	g++ -g -std=c++11 -c Server.cpp
-	g++ -g -std=c++11 -c wrdgen.cpp
-	g++ -g -std=c++11 -c Game.cpp
-	g++ -std=c++11 -o Server Server.o wrdgen.o Game.o
-	g++ -std=c++11 -o User User.cpp
+	g++ -Ofast -w -g -std=c++11 -lpthread -c Server.cpp
+	g++ -Ofast -w -g -std=c++11 -lpthread -c wrdgen.cpp
+	g++ -Ofast -w -g -std=c++11 -lpthread -c Game.cpp
+	g++ -Ofast -w -std=c++11 -lpthread -o Server Server.o wrdgen.o Game.o
 
 clean: 
 	rm -rf User Server.o wrdgen.o Game.o Server *.dSYM

@@ -79,7 +79,7 @@ int main(int argc, char * argv[]) {
         if (bytesRecv <= 0) {
             std::cout << "Error in receiving message from server. Try restarting the game" << std::endl;
         }
-        
+
         bytesRecv = 0;
         while (bytesRecv < total_size) {
             bytesRecv += recv(socket_desc, (char *) inBuffer, total_size, 0);
@@ -93,7 +93,7 @@ int main(int argc, char * argv[]) {
         if (std::string(inBuffer).find_last_of(":") == std::string::npos){
             continue;
         }
-        
+
         fgets(outBuffer, BUFFERSIZE, stdin);
         total_size = strlen(outBuffer);
 
