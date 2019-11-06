@@ -17,6 +17,8 @@
 
 #define BUFFERSIZE 512
 
+int handle_error(std::string error_message);
+
 //volatile sig_atomic_t force_quit = 0;
 //
 //void handle(int signum) {
@@ -45,17 +47,12 @@ int main(int argc, char * argv[]) {
 //    signal(SIGINT, handle);
 
     if ((socket_desc = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
-    {
-        std::cout << "socket() failed" << std::endl;
-        exit(1);
-    }
+        handle_error("socket() failed");
 
     int yes = 1;
     if (setsockopt(socket_desc, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) < 0)
-    {
-        std::cout << "setsockopt() failed" << std::endl;
-        exit(1);
-    }
+        handle_error("setsockopt() failed");
+
 
     memset(&serverAddr, 0, sizeof(serverAddr));
     serverAddr.sin_family = AF_INET;
@@ -63,10 +60,7 @@ int main(int argc, char * argv[]) {
     serverAddr.sin_addr.s_addr = inet_addr(server_IP);
 
     if (connect(socket_desc, (struct sockaddr *) &serverAddr, sizeof(serverAddr)) < 0)
-    {
-        std::cout << "connect() failed" << std::endl;
-        exit(1);
-    }
+        handle_error( "connect() failed");
 
     while (!quit) {
         // Clear the buffers
@@ -128,4 +122,9 @@ int main(int argc, char * argv[]) {
     close(socket_desc);
     std::cout << "Thank you for playing!" << std::endl;
     exit(0);
+}
+
+int handle_error(std::string error_message){
+    std::cout << error_message << std::endl;
+    exit(1);
 }

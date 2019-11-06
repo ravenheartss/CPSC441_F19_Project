@@ -50,7 +50,7 @@ void askName(int sock, char * buffer);
 void print_wait(bool enough, float time);
 void send_new_name(std::string name);
 void sendData (int sock, char* buffer, int size);
-
+int handle_error(std::string error_message);
 
 int main(int argc, char *argv[])
 {
@@ -132,17 +132,11 @@ void initServer(int& serverSock, int port)
     struct sockaddr_in serverAddr;
 
     if ((serverSock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
-    {
-        std::cout << "socket() failed" << std::endl;
-        exit(1);
-    }
+        handle_error("socket() failed");
 
     int yes = 1;
     if (setsockopt(serverSock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) < 0)
-    {
-        std::cout << "setsockopt() failed" << std::endl;
-        exit(1);
-    }
+        handle_error("setsockopt() failed");
 
     memset(&serverAddr, 0, sizeof(serverAddr));
     serverAddr.sin_family = AF_INET;
@@ -151,17 +145,13 @@ void initServer(int& serverSock, int port)
 
     // Bind to the local address
     if (bind(serverSock, (sockaddr*)&serverAddr, sizeof(serverAddr)) < 0)
-    {
-        std::cout << "bind() failed" << std::endl;
-        exit(1);
-    }
+        handle_error("bind() failed");
 
     // Listen for connection requests
     if (listen(serverSock, MAXPENDING) < 0)
-    {
-        std::cout << "listen() failed" << std::endl;
-        exit(1);
-    }
+        handle_error("listen() failed");
+
+    std::cout << "Server has started" << std::endl;
 }
 
 void processSockets (fd_set readySocks)
@@ -190,7 +180,6 @@ void processSockets (fd_set readySocks)
         }
 
     }
-
     delete[] buffer;
 }
 
@@ -253,13 +242,13 @@ void askName(int sock, char * buffer){
             add_player(sock, name);
             break;
         }
-        
+
         for (qit = players.begin(); qit != players.end(); qit++){
             if (name.compare(qit->second.player_name) == 0){
                 break;
             }
         }
-        
+
         if (qit == players.end()){
             assigned_sock.insert(sock);
             add_player(sock, name);
@@ -315,7 +304,6 @@ void send_new_name(std::string name){
     print_wait(1, timeout_game-sec);
 }
 
-
 void sendAll(std::string toall){
 
     length = toall.length();
@@ -341,4 +329,9 @@ void recv_length(int sock, size_t len_string, char * buffer)
     recv(sock, (unsigned char *) &len_string, sizeof(len_string), 0);
     int size;
     receiveData(sock, buffer, size);
+}
+
+int handle_error(std::string error_message){
+    std::cout << error_message << std::endl;
+    exit(1);
 }
