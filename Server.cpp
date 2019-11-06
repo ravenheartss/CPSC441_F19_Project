@@ -53,7 +53,6 @@ void sendData (int sock, char* buffer, int size);
 
 int main(int argc, char *argv[])
 {
-    inGame = false;
     int serverSock;                  // server socket descriptor
     int clientSock;                  // client socket descriptor
     struct sockaddr_in clientAddr;   // address of the client
