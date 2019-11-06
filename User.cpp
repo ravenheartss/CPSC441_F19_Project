@@ -34,8 +34,8 @@ int main(int argc, char * argv[]) {
     int bytesSent;
     size_t total_size;
 
-    bool force_quit;
-    bool quit;
+    bool force_quit = false;
+    bool quit = false;
 
     // To be changed
     const char * server_IP = "127.0.0.1";
