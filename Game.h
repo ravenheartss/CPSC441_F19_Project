@@ -17,4 +17,5 @@ void monitor_sockets(fd_set readySocks);
 void sort_ranks();
 void display_all();
 void display(int sock);
+void *start_thread(void *recvset);
 //std::unordered_map<int, int> get_players();
