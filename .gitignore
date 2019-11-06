@@ -1,2 +1,5 @@
 *.o
 ./.idea/
+Server
+User
+.idea/workspace.xml
