@@ -23,6 +23,7 @@
 #include <utility>
 #include <signal.h>
 #include <algorithm>
+#include <pthread.h>
 
 #define BUFFERSIZE 512
 
@@ -58,8 +59,7 @@ void add_player(int sock_no, std::string name){
     info.player_name = name;
     if (!inGame) {
         players[sock_no] = info;
-        struct player *toadd = &info;
-        for_sorting.push_back(toadd);
+        for_sorting.push_back(&players[sock_no]);
     }else{
         queue[sock_no] = info;
     }
@@ -103,6 +103,11 @@ int get_num_players(){
     return players.size();
 }
 
+void *start_thread(void *recvset){
+    fd_set sockset = *(fd_set*)recvset;
+    start_game(200, sockset);
+}
+
 void start_game(int num, fd_set readySocks)
 {
     //inGame = true;
@@ -128,14 +133,16 @@ void game_loop(fd_set readySocks)
 ////        std::cout << "did it make it here? lets test" << std::endl;
 //        send(word_list[1],playersock);
 //    }
-    sendAll("Game starting");
+    sendAll("Game starting\n");
     display_all();
     std::string first_word = "\nType: " + get_word(-1) + "\n";
     sendAll(first_word);
     start = std::clock();
-    while (get_time_remaining() < 180){
+    std::cout << "Got here3" << std::endl;
+//    while (get_time_remaining() < 180){
         monitor_sockets(readySocks);
-    }
+    std::cout << "Got here12" << std::endl;
+//    }
 }
 
 void finish_game(){
@@ -157,24 +164,26 @@ void check(int sock_no, std::string typed){
 void display(int sock){
     sort_ranks();
     std::string fmt = "Time Remaining = " + std::to_string(get_time_remaining());
-	fmt += "Rank  Name          Speed    Errors\n\n";
+	fmt += "\n\nRank  Name          Speed    Errors\n\n";
     send(fmt, sock);
     fmt = "";
     int i = 1;
-    for (it1 = for_sorting.begin(); it1 != for_sorting.end(); it2++){
+
+    for (it1 = for_sorting.begin(); it1 != for_sorting.end(); it1++){
         fmt = fmt + std::to_string(i) + ")" + "    " + (*it1)->player_name;
         int j = 14 - (*it1)->player_name.length();
         while( j != 0){
             fmt += " ";
-            j++;
+            j--;
         }
         fmt += std::to_string((*it1)->rate);
         j = 9 - std::to_string((*it1)->rate).length();
         while(j != 0){
             fmt += " ";
-            j++;
+            j--;
         }
         fmt += std::to_string((*it1)->errors) + "\n";
+        i++;
     }
     send(fmt, sock);
 }
@@ -187,20 +196,20 @@ void display_all(){
     sendAll(fmt);
     fmt = "";
     int i = 1;
-    for (temp = players.begin(); temp != players.end(); temp++){
-        fmt = fmt + std::to_string(i) + ")" + "    " + temp->second.player_name;
-        int j = 14 - temp->second.player_name.length();
+    for (it1 = for_sorting.begin(); it1 != for_sorting.end(); it1++){
+        fmt = fmt + std::to_string(i) + ")" + "    " + (*it1)->player_name;
+        int j = 14 - (*it1)->player_name.length();
         while( j != 0){
             fmt += " ";
             j--;
         }
-        fmt += std::to_string(temp->second.rate);
-        j = 9 - std::to_string(temp->second.rate).length();
+        fmt += std::to_string((*it1)->rate);
+        j = 9 - std::to_string((*it1)->rate).length();
         while(j != 0){
             fmt += " ";
             j--;
         }
-        fmt += std::to_string(temp->second.errors) + "\n";
+        fmt += std::to_string((*it1)->errors) + "\n";
         i++;
     }
     sendAll(fmt);
@@ -217,32 +226,39 @@ float get_time_remaining(){
 }
 
 void monitor_sockets(fd_set readySocks){
+    std::cout << "Got here9" << std::endl;
     char * buff = new char[BUFFERSIZE];
     std::string input;
     int size;
     int br;
-    for (it2 = players.begin(); it2 != players.end(); it2++)
-    {
-        /*
-         * THIS PART IS NOT WORKING!!!!!!!!!!
-         */
-        int sock = it2->second.socket;
-        if(!FD_ISSET(sock, &readySocks)){
-            continue;
+    std::unordered_map <int, struct player>::iterator temp;
+    while (get_time_remaining() < 180) {
+        std::cout << "Got here" << std::endl;
+
+        for (temp = players.begin(); temp != players.end(); temp++) {
+            /*
+             * THIS PART IS NOT WORKING!!!!!!!!!!
+             */
+            int sock = temp->second.socket;
+            if (!FD_ISSET(sock, &readySocks)) {
+                continue;
+            }
+            memset(buff, 0, BUFFERSIZE);
+            br = 0;
+            br = recv(sock, (unsigned char *) &len, sizeof(len), 0);
+            receiveData(sock, buff, size);
+            std::cout << "YAYYYYY!!!!!!" << std::endl;
+            std::cout << buff << std::endl;
+            input = std::string(buff);
+            input.erase(std::remove(input.begin(), input.end(), '\n'),input.end());
+            check(sock, input);
+            display(sock);
+            input = "Type: " + get_word(sock) + "\n";
+            send(input, sock);
         }
-        memset(buff, 0, BUFFERSIZE);
-        br = 0;
-        br = recv(sock, (unsigned char *) &len, sizeof(len), 0);
-        receiveData(sock, buff, size);
-        std::cout << "YAYYYYY!!!!!!" << std::endl;
-        input = std::string(buff);
-        input.erase(std::remove(input.begin(), input.end(), '\n'),input.end());
-        check(sock, input);
-        display(sock);
-        input = "Type: " + get_word(sock) + "\n";
-        send(input, sock);
     }
-    delete[] buff;
+//    delete[] buff;
+    pthread_exit(NULL);
 }
 
 
