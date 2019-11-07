@@ -1,5 +1,3 @@
-
-
 #include <iostream>
 #include <sys/socket.h> // for socket(), connect(), send(), and recv()
 #include <arpa/inet.h>  // for sockaddr_in and inet_addr()
@@ -40,7 +38,7 @@ fd_set tempset;
 volatile bool inGame = false;
 std::vector<std::string> word_list;
 std::clock_t start;
-float total_time = 60.0;
+float total_time = 10.0;
 struct timeval timeout = {0, 10};
 size_t len = 0;
 
@@ -134,7 +132,6 @@ void finish_game(){
     players.clear();
     quit_players.clear();
     pthread_exit(NULL);
-
 }
 
 void check(int sock_no, std::string typed){
@@ -235,7 +232,7 @@ void monitor_sockets(){
     std::unordered_map <int, struct player>::iterator temp;
     struct timeval selectTime;
 
-    while (time_elapsed() < 180.0) {
+    while (get_time_remaining() >= 0) {
         selectTime = timeout;
         memcpy(&tempset, &recvSockSet, sizeof(recvSockSet));
         int ready = select(maxDesc + 1, &tempset, NULL, NULL, &selectTime);
