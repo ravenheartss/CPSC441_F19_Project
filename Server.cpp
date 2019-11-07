@@ -26,6 +26,7 @@ const int BUFFERSIZE = 512;   // Size the message buffers
 const int MAXPENDING = 10;    // Maximum pending connections
 
 fd_set recvSockSet;   // The set of descriptors for incoming connections
+//fd_set tempset;
 int maxDesc = 0;      // The max descriptor
 bool terminated = false;
 size_t length = 0;
@@ -36,7 +37,7 @@ std::clock_t timeout_start;
 extern std::unordered_map <int, struct player> players;
 extern std::unordered_map <int, struct player> queue;
 extern std::unordered_map <int, struct player> quit_players;
-extern bool inGame;
+extern volatile bool inGame;
 
 std::unordered_set <int> assigned_sock;
 std::unordered_set<int>::iterator it;
@@ -76,7 +77,6 @@ int main(int argc, char *argv[])
 
         // copy the receive descriptors to the working set
         memcpy(&tempRecvSockSet, &recvSockSet, sizeof(recvSockSet));
-
         // Select timeout has to be reset every time before select() is
         // called, since select() may update the timeout parameter to
         // indicate how much time was left.
@@ -106,13 +106,13 @@ int main(int argc, char *argv[])
             maxDesc = std::max(maxDesc, clientSock);
 
             char * buffer = new char[BUFFERSIZE];
-//            assigned_sock.insert(clientSock);
-            add_player(clientSock, "Shankar");
+            assigned_sock.insert(clientSock);
             askName(clientSock, buffer);
             if (get_num_players() == 1){
                 timeout_start = std::clock();
                 print_wait(1, timeout_game);
             }
+
         }else{
             processSockets(tempRecvSockSet);
         }
@@ -180,10 +180,8 @@ void processSockets (fd_set readySocks)
                 if (get_num_players() > 1){
                     inGame = 1;
                 	sendAll("Starting game...");
-                	pid_t pid = fork();
-                	if (pid == 0){
-                        start_game(200, readySocks);
-                    }
+                    pthread_t thread;
+                    pthread_create(&thread, NULL, start_thread, (void*)&readySocks);
                 }else {
                     print_wait(0, sec);
                     timeout_start = std::clock();
@@ -206,7 +204,7 @@ void receiveData (int sock, char* inBuffer, int& size){
 
         while (FD_ISSET(maxDesc, &recvSockSet) == false){
             maxDesc -= 1;
-//            players.erase(sock);
+            players.erase(sock);
         }
 
         return;
@@ -236,6 +234,7 @@ void askName(int sock, char * buffer){
     sendData(sock, (char *) msg_send.c_str(), length);
     length = 0;
     while(length > 12 || length <= 0){
+        memset(buffer, 0, BUFFERSIZE);
         bytesRecv = 0;
         bytesRecv = recv(sock, (unsigned char *) &length, sizeof(length), 0);
         receiveData(sock, buffer, size);

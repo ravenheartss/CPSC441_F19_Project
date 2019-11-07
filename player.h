@@ -9,5 +9,4 @@ struct player{
     int rate;
     int n_typed;
     int errors;
-    int characters;
 };

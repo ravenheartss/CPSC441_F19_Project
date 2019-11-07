@@ -34,11 +34,14 @@ std::vector <struct player *> for_sorting;
 std::vector <struct player *>::iterator it1;
 std::unordered_map <int, struct player>::iterator it2;
 
-
-bool inGame = false;
+extern fd_set recvSockSet;
+extern int maxDesc;
+fd_set tempset;
+volatile bool inGame = false;
 std::vector<std::string> word_list;
 std::clock_t start;
 float total_time = 180.0;
+struct timeval timeout = {0, 10};
 size_t len = 0;
 
 
@@ -54,7 +57,6 @@ void add_player(int sock_no, std::string name){
     info.n_typed = 0;
     info.pos = 0;
     info.rate = 0;
-    info.characters = 0;
     info.errors = 0;
     info.player_name = name;
     if (!inGame) {
@@ -103,60 +105,45 @@ int get_num_players(){
     return players.size();
 }
 
-void *start_thread(void *recvset){
-    fd_set sockset = *(fd_set*)recvset;
-    start_game(200, sockset);
+void *start_thread(void* fd)
+{
+    while(!inGame){};
+    start_game(200);
 }
 
-void start_game(int num, fd_set readySocks)
+void start_game(int num)
 {
-    //inGame = true;
-//    std::cout << "Before generate" << std::endl;
+
     word_list=generate_random(num);
-//    std::cout << "after generate words before print list" << std::endl;
-//    for (int i=0; i<word_list.size(); i++){
-//        std::cout << word_list[i] << std::endl;
-//    }
-//    std::cout << "after generate" << std::endl;
-//    std::string word = "Type: " + get_word(-1);
-//    for (int i = 0; i++; )
-
-    game_loop(readySocks);
+    game_loop();
 
 }
 
-void game_loop(fd_set readySocks)
+void game_loop()
 {
-//    while (get_time_remaining() < 180)
-//    for (auto player : players){
-//        int playersock = player.first;
-////        std::cout << "did it make it here? lets test" << std::endl;
-//        send(word_list[1],playersock);
-//    }
-    sendAll("Game starting\n");
     display_all();
-    std::string first_word = "\nType: " + get_word(-1) + "\n";
+    std::string first_word = "\nType: " + get_word(-1) + "\n\n";
     sendAll(first_word);
     start = std::clock();
-    std::cout << "Got here3" << std::endl;
-//    while (get_time_remaining() < 180){
-        monitor_sockets(readySocks);
-    std::cout << "Got here12" << std::endl;
-//    }
+    monitor_sockets();
 }
 
 void finish_game(){
     display_all();
+    sendAll("Thank you for playing!");
     players.clear();
     quit_players.clear();
+    pthread_exit(NULL);
 
-    kill(getpid(),SIGKILL);
 }
 
 void check(int sock_no, std::string typed){
     struct player info = players[sock_no];
     if (typed.compare(word_list[info.pos]) == 0){
-        info.pos++;
+        players[sock_no].pos++;
+        players[sock_no].n_typed++;
+    }else{
+        players[sock_no].errors++;
     }
 }
 
@@ -225,40 +212,48 @@ float get_time_remaining(){
     return (total_time - elapsed);
 }
 
-void monitor_sockets(fd_set readySocks){
-    std::cout << "Got here9" << std::endl;
+float time_elapsed(){
+    std::clock_t diff = std::clock() - start;
+    float elapsed = (float)diff/CLOCKS_PER_SEC;
+    return elapsed;
+}
+
+void monitor_sockets(){
     char * buff = new char[BUFFERSIZE];
     std::string input;
     int size;
     int br;
     std::unordered_map <int, struct player>::iterator temp;
-    while (get_time_remaining() < 180) {
-        std::cout << "Got here" << std::endl;
+    struct timeval selectTime;
 
+    while (time_elapsed() < 180.0) {
+        selectTime = timeout;
+        memcpy(&tempset, &recvSockSet, sizeof(recvSockSet));
+        int ready = select(maxDesc + 1, &tempset, NULL, NULL, &selectTime);
+        if (ready < 0)
+        {
+            std::cout << "select() failed" << std::endl;
+            break;
+        }
         for (temp = players.begin(); temp != players.end(); temp++) {
-            /*
-             * THIS PART IS NOT WORKING!!!!!!!!!!
-             */
+
             int sock = temp->second.socket;
-            if (!FD_ISSET(sock, &readySocks)) {
+            if (!FD_ISSET(sock, &tempset)) {
                 continue;
             }
+
             memset(buff, 0, BUFFERSIZE);
-            br = 0;
-            br = recv(sock, (unsigned char *) &len, sizeof(len), 0);
-            receiveData(sock, buff, size);
-            std::cout << "YAYYYYY!!!!!!" << std::endl;
-            std::cout << buff << std::endl;
+            recv_length(sock, len, buff);
             input = std::string(buff);
             input.erase(std::remove(input.begin(), input.end(), '\n'),input.end());
             check(sock, input);
             display(sock);
-            input = "Type: " + get_word(sock) + "\n";
+            input = "Type: " + get_word(sock) + "\n\n";
             send(input, sock);
         }
     }
-//    delete[] buff;
-    pthread_exit(NULL);
+    delete[] buff;
+    finish_game();
 }
 
 

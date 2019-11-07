@@ -78,6 +78,7 @@ int main(int argc, char * argv[]) {
 
         if (bytesRecv <= 0) {
             std::cout << "Error in receiving message from server. Try restarting the game" << std::endl;
+            exit(-1);
         }
 
         bytesRecv = 0;
@@ -88,6 +89,7 @@ int main(int argc, char * argv[]) {
 
         if (bytesRecv <= 0) {
             std::cout << "Error in receiving message from server. Try restarting the game" << std::endl;
+            exit(-1);
         }
 
         if (std::string(inBuffer).find_last_of(":") == std::string::npos){
