@@ -142,6 +142,7 @@ void check(int sock_no, std::string typed){
     if (typed.compare(word_list[info.pos]) == 0){
         players[sock_no].pos++;
         players[sock_no].n_typed++;
+        update_rate(&players[sock_no]); 
     }else{
         players[sock_no].errors++;
     }
@@ -216,6 +217,14 @@ float time_elapsed(){
     std::clock_t diff = std::clock() - start;
     float elapsed = (float)diff/CLOCKS_PER_SEC;
     return elapsed;
+}
+
+void update_rate(player *player){
+    //std::clock_t diff = std::clock() - start;
+    float mins_elapsed = time_elapsed()/60.0;
+    int n_typed = player -> n_typed;
+    int rate = round(n_typed/mins_elapsed);
+    player -> rate = rate;
 }
 
 void monitor_sockets(){
