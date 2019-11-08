@@ -51,6 +51,7 @@ void print_wait(bool enough, float time);
 void send_new_name(std::string name);
 void sendData (int sock, char* buffer, int size);
 int handle_error(std::string error_message);
+bool name_length_invalid(size_t name_length);
 
 int main(int argc, char *argv[])
 {
@@ -213,8 +214,11 @@ void sendData (int sock, char* buffer, int size)
     }
 }
 
-void askName(int sock, char * buffer){
+bool name_length_invalid(size_t name_length){
+    return length > 12 || length < 2;
+}
 
+void askName(int sock, char * buffer){
     length = 0;
     int size;
     std::string msg_send = "Please enter your name: ";
@@ -222,15 +226,15 @@ void askName(int sock, char * buffer){
     sendData(sock, (char *) &length, sizeof(length));
     sendData(sock, (char *) msg_send.c_str(), length);
     length = 0;
-    while(length > 12 || length <= 0){
+    while(name_length_invalid(length)){
         memset(buffer, 0, BUFFERSIZE);
         bytesRecv = 0;
         bytesRecv = recv(sock, (unsigned char *) &length, sizeof(length), 0);
         receiveData(sock, buffer, size);
         std::string name = std::string(buffer);
         name.erase(std::remove(name.begin(), name.end(), '\n'),name.end());
-        if (length > 12 || length <= 0) {
-            msg_send = "Please enter a valid and unique name (at most 12 characters): ";
+        if (name_length_invalid(length)) {
+            msg_send = "Please enter a valid and unique name (at least 1 and at most 12 characters): ";
             length = msg_send.length();
             sendData(sock, (char *) &length, sizeof(length));
             sendData(sock, (char *) msg_send.c_str(), length);
