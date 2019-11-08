@@ -1,14 +1,16 @@
 UofC CPSC441_F19 Project Group 3
 
-TODO:
+Libraries needed to run the server/game: 
+sudo apt-get install g++
+sudo apt-get install wbritish
+sudo apt install make  
 
-1. Game over -- disconnect all players
-2. Clean-up & Comment
+To compile code and run server, call this command:
+./run.sh
 
-ADMIN
+To start client/clients call this command after compiling code:
+./User 6000
 
-1. Share VM info
 
-Libraries needed to run the server/game: sudo apt-get install wbritish
 
-On MAC OS X: brew install coreutils
+To run locally on MAC OS X: brew install coreutils

@@ -22,6 +22,7 @@
 #include <signal.h>
 #include <algorithm>
 #include <pthread.h>
+#include <cmath>
 
 #define BUFFERSIZE 512
 
@@ -38,7 +39,7 @@ fd_set tempset;
 volatile bool inGame = false;
 std::vector<std::string> word_list;
 std::clock_t start;
-float total_time = 10.0;
+float total_time = 200.0;
 struct timeval timeout = {0, 10};
 size_t len = 0;
 
