@@ -31,7 +31,7 @@ int maxDesc = 0;      // The max descriptor
 bool terminated = false;
 size_t length = 0;
 int bytesRecv;
-float timeout_game = 10.0;
+float timeout_game = 4.0;
 std::clock_t timeout_start;
 
 extern std::unordered_map <int, struct player> players;
