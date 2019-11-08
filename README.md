@@ -2,7 +2,9 @@ UofC CPSC441_F19 Project Group 3
 
 Libraries needed to run the server/game: 
 sudo apt-get install g++
+
 sudo apt-get install wbritish
+
 sudo apt install make  
 
 To compile code and run server, call this command:
