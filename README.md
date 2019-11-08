@@ -1,6 +1,9 @@
 UofC CPSC441_F19 Project Group 3
 
+How to run program on RAC VMs: 
+
 Libraries needed to run the server/game: 
+
 sudo apt-get install g++
 
 sudo apt-get install wbritish
