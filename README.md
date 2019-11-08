@@ -2,6 +2,8 @@ UofC CPSC441_F19 Project Group 3
 
 How to run program on RAC VMs: 
 
+Upload code to RAC VMs
+
 Libraries needed to run the server/game: 
 
 sudo apt-get install g++
