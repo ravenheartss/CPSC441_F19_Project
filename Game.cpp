@@ -148,7 +148,8 @@ void check(int sock_no, std::string typed){
 
 void display(int sock){
     sort_ranks();
-    std::string fmt = "Time Remaining = " + std::to_string(get_time_remaining());
+    float time_remaining = get_time_remaining();
+    std::string fmt = time_remaining > 0 ? "Time Remaining = " + std::to_string(get_time_remaining()) : "Game is over!";
 	fmt += "\n\nRank  Name          Speed    Errors\n\n";
     send(fmt, sock);
     fmt = "";
@@ -176,7 +177,8 @@ void display(int sock){
 void display_all(){
     std::unordered_map <int, struct player>::iterator temp;
     sort_ranks();
-    std::string fmt = "Time Remaining = " + std::to_string(get_time_remaining());
+    float time_remaining = get_time_remaining();
+    std::string fmt = time_remaining > 0 ? "Time Remaining = " + std::to_string(get_time_remaining()) : "Game is over!";
     fmt += "\n\nRank  Name          Speed    Errors\n\n";
     sendAll(fmt);
     fmt = "";
