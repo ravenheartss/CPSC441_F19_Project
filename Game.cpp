@@ -39,7 +39,7 @@ extern fd_set tempset;
 fd_set backupSet;
 volatile bool inGame = false;
 std::vector<std::string> word_list;
-std::clock_t start;
+std::time_t start;
 float total_time = 300.0;
 struct timeval timeout = {0, 10};
 size_t len = 0;
