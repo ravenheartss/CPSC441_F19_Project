@@ -20,4 +20,3 @@ void display(int sock);
 void *start_thread(void* fd);
 float time_elapsed();
 void update_rate(player *player);
-//std::unordered_map<int, int> get_players();

@@ -13,27 +13,25 @@
 #include <fstream>
 #include <algorithm>
 #include <signal.h>
+#include <cstdio>
+#include <ctime>
+#include <pthread.h>
 
 #define BUFFERSIZE 512
 
 int handle_error(std::string error_message, int exit_with);
 
-//volatile sig_atomic_t force_quit = 0;
-//
-//void handle(int signum) {
-//    force_quit = 1;
-//}
 
 int main(int argc, char * argv[]) {
 
     int socket_desc;
     struct sockaddr_in serverAddr;
+    size_t total_size;
 
     char inBuffer[BUFFERSIZE];
     char outBuffer[BUFFERSIZE];
     int bytesRecv;
     int bytesSent;
-    size_t total_size;
 
     bool force_quit = false;
     bool quit = false;
@@ -60,14 +58,17 @@ int main(int argc, char * argv[]) {
 
     if (connect(socket_desc, (struct sockaddr *) &serverAddr, sizeof(serverAddr)) < 0)
         handle_error( "connect() failed", 1);
-
+//    pthread_t timekeeper;
+//    pthread_create(&timekeeper, NULL, term_time, (void*)&socket_desc);
     while (!quit) {
         // Clear the buffers
         total_size = 0;
         memset(&outBuffer, 0, BUFFERSIZE);
         memset(&inBuffer, 0, BUFFERSIZE);
+//        recieve_data(socket_desc, inBuffer);
+        total_size = 0;
         bytesRecv = 0;
-        bytesRecv = recv(socket_desc, (unsigned char *) &total_size, sizeof(size_t), 0);
+        bytesRecv = recv(socket_desc, (unsigned char*) &total_size, sizeof(size_t), 0);
 
         if (bytesRecv <= 0)
             handle_error("Error in receiving message from server. Try restarting the game", -1);
@@ -81,33 +82,29 @@ int main(int argc, char * argv[]) {
         if (bytesRecv <= 0)
             handle_error("Error in receiving message from server. Try restarting the game", -1);
 
+        if (std::string(inBuffer).find("Thank you for playing") != std::string::npos){
+            quit = true;
+            continue;
+        }
 
         if (std::string(inBuffer).find_last_of(":") == std::string::npos){
             continue;
         }
 
+        memset(&outBuffer, 0, BUFFERSIZE);
         fgets(outBuffer, BUFFERSIZE, stdin);
         total_size = strlen(outBuffer);
 
         bytesSent = send(socket_desc, (char *) &total_size, sizeof(total_size), 0);
 
         if (bytesSent <= 0) {
-            std::cout << "$$$$$$" << std::endl;
-            std::cout << "Total size = " << total_size << std::endl;
-            std::cout << "outBUffer = " << outBuffer << std::endl;
             handle_error("Error in receiving message from server. Try restarting the game", -1);
         }
 
         bytesSent = send(socket_desc, (char *) &outBuffer, total_size, 0);
 
         if (bytesSent < 0 || bytesSent != total_size) {
-            std::cout << "######" << std::endl;
             handle_error("Error in receiving message from server. Try restarting the game", -1);
-        }
-
-        std::string check = std::string(outBuffer);
-        if (check.compare("quit") == 0) {
-            quit = true;
         }
     }
 
@@ -120,3 +117,5 @@ int handle_error(std::string error_message, int exit_with){
     std::cout << error_message << std::endl;
     exit(exit_with);
 }
+
+

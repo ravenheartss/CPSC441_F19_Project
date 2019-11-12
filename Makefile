@@ -1,7 +1,7 @@
 all: User Server
 
 User: User.cpp
-	g++ -g -std=c++11 -o User User.cpp
+	g++ -g -std=c++11 -lpthread -o User User.cpp
 
 Server: Server.cpp wrdgen.cpp Game.cpp
 	g++ -Ofast -w -g -std=c++11 -lpthread -c Server.cpp

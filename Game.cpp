@@ -35,11 +35,12 @@ std::unordered_map <int, struct player>::iterator it2;
 
 extern fd_set recvSockSet;
 extern int maxDesc;
-fd_set tempset;
+extern fd_set tempset;
+fd_set backupSet;
 volatile bool inGame = false;
 std::vector<std::string> word_list;
 std::clock_t start;
-float total_time = 200.0;
+float total_time = 300.0;
 struct timeval timeout = {0, 10};
 size_t len = 0;
 
@@ -107,31 +108,32 @@ int get_num_players(){
 void *start_thread(void* fd)
 {
     while(!inGame){};
+//    memcpy(&tempset, &recvSockSet, sizeof(recvSockSet));
     start_game(200);
 }
 
 void start_game(int num)
 {
-
     word_list=generate_random(num);
     game_loop();
-
 }
 
 void game_loop()
 {
+    time(&start);
     display_all();
     std::string first_word = "\nType: " + get_word(-1) + "\n\n";
-    sendAll(first_word);
-    start = std::clock();
+    sendAll(1, first_word);
     monitor_sockets();
 }
 
 void finish_game(){
     display_all();
-    sendAll("Thank you for playing!");
+    sendAll(1, "Thank you for playing!");
     players.clear();
     quit_players.clear();
+    game_clear();
+    inGame = false;
     pthread_exit(NULL);
 }
 
@@ -181,7 +183,7 @@ void display_all(){
     float time_remaining = get_time_remaining();
     std::string fmt = time_remaining > 0 ? "Time Remaining = " + std::to_string(get_time_remaining()) : "Game is over!";
     fmt += "\n\nRank  Name          Speed    Errors\n\n";
-    sendAll(fmt);
+    sendAll(1, fmt);
     fmt = "";
     int i = 1;
     for (it1 = for_sorting.begin(); it1 != for_sorting.end(); it1++){
@@ -200,7 +202,7 @@ void display_all(){
         fmt += std::to_string((*it1)->errors) + "\n";
         i++;
     }
-    sendAll(fmt);
+    sendAll(1, fmt);
 }
 
 void sort_ranks(){
@@ -208,19 +210,20 @@ void sort_ranks(){
 }
 
 float get_time_remaining(){
-    std::clock_t diff = std::clock() - start;
-    float elapsed = (float)diff/CLOCKS_PER_SEC;
+    std::time_t now;
+    std::time(&now);
+    float elapsed = std::difftime(now, start);
     return (total_time - elapsed);
 }
 
 float time_elapsed(){
-    std::clock_t diff = std::clock() - start;
-    float elapsed = (float)diff/CLOCKS_PER_SEC;
+    std::time_t now;
+    std::time(&now);
+    float elapsed = std::difftime(now, start);
     return elapsed;
 }
 
 void update_rate(player *player){
-    //std::clock_t diff = std::clock() - start;
     float mins_elapsed = time_elapsed()/60.0;
     int n_typed = player -> n_typed;
     int rate = round(n_typed/mins_elapsed);
@@ -234,16 +237,19 @@ void monitor_sockets(){
     int br;
     std::unordered_map <int, struct player>::iterator temp;
     struct timeval selectTime;
+    memcpy(&backupSet, &recvSockSet, sizeof(recvSockSet));
 
-    while (get_time_remaining() >= 0) {
+    while (time_elapsed() <= total_time) {
         selectTime = timeout;
-        memcpy(&tempset, &recvSockSet, sizeof(recvSockSet));
+        memcpy(&tempset, &backupSet, sizeof(backupSet));
         int ready = select(maxDesc + 1, &tempset, NULL, NULL, &selectTime);
+
         if (ready < 0)
         {
             std::cout << "select() failed" << std::endl;
             break;
         }
+
         for (temp = players.begin(); temp != players.end(); temp++) {
 
             int sock = temp->second.socket;
@@ -264,6 +270,7 @@ void monitor_sockets(){
     delete[] buff;
     finish_game();
 }
+
 
 
 
