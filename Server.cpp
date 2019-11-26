@@ -32,7 +32,9 @@ int maxDesc = 0;      // The max descriptor
 bool terminated = false;
 size_t length = 0;
 int bytesRecv;
-float timeout_game = 60.0;
+int sentBytes;
+float timeout_game = 10.0;
+extern float total_time;
 std::time_t timeout_start;
 
 extern std::unordered_map <int, struct player> players;
@@ -51,9 +53,10 @@ void processSockets (fd_set);
 void askName(int sock, char * buffer);
 void print_wait(bool enough, float time);
 void send_new_name(std::string name);
-void sendData (int sock, char* buffer, int size);
+int sendData (int sock, char* buffer, int size);
 int handle_error(std::string error_message);
 bool name_length_invalid(size_t name_length);
+void askTime(int,char *);
 
 int main(int argc, char *argv[])
 {
@@ -111,6 +114,8 @@ int main(int argc, char *argv[])
             char * buffer = new char[BUFFERSIZE];
             askName(clientSock, buffer);
             if (get_num_players() == 1){
+                memset(buffer,0,BUFFERSIZE);
+                askTime(clientSock, buffer);
                 time(&timeout_start);
                 print_wait(1, timeout_game);
             }
@@ -190,21 +195,12 @@ void receiveData (int sock, char* inBuffer, int& size){
 
     if (size <= 0)
     {
-        std::cout << "recv() failed, or the connection is closed. " << std::endl;
-        FD_CLR(sock, &recvSockSet);
-        FD_CLR(sock, &backupSet);
-        FD_CLR(sock, &tempset);
-
-        while (FD_ISSET(maxDesc, &recvSockSet) == false){
-            maxDesc -= 1;
-        }
-        quit_players[sock] = players[sock];
-        players.erase(sock);
+        player_quitting(sock);
         return;
     }
 }
 
-void sendData (int sock, char* buffer, int size)
+int sendData (int sock, char* buffer, int size)
 {
     int bytesSent = 0;
 
@@ -213,8 +209,11 @@ void sendData (int sock, char* buffer, int size)
     if (bytesSent <= 0 || bytesSent != size)
     {
         std::cout << "error in sending" << std::endl;
-        return;
+        std::cout << buffer << std::endl;
+        player_quitting(sock);
+        return bytesSent;
     }
+    return bytesSent;
 }
 
 bool name_length_invalid(size_t name_length){
@@ -239,8 +238,14 @@ void askName(int sock, char * buffer){
         if (name_length_invalid(length)) {
             msg_send = "Please enter a valid and unique name (at least 1 and at most 12 characters): ";
             length = msg_send.length();
-            sendData(sock, (char *) &length, sizeof(length));
-            sendData(sock, (char *) msg_send.c_str(), length);
+            sentBytes = sendData(sock, (char *) &length, sizeof(length));
+            if (sentBytes <= 0){
+                return;
+            }
+            sentBytes = sendData(sock, (char *) msg_send.c_str(), length);
+            if (sentBytes <= 0){
+                return;
+            }
             length = 0;
             continue;
         }
@@ -331,14 +336,26 @@ void sendAll(bool isPlayer, std::string toall){
     if (isPlayer) {
         for (iter = assigned_sock.begin(); iter != assigned_sock.end(); iter++) {
             int sock = *iter;
-            sendData(sock, (char *) &length, sizeof(length));
-            sendData(sock, (char *) toall.c_str(), length);
+            sentBytes = sendData(sock, (char *) &length, sizeof(length));
+            if (sentBytes <= 0){
+                return;
+            }
+            sentBytes = sendData(sock, (char *) toall.c_str(), length);
+            if (sentBytes <= 0){
+                return;
+            }
         }
     }else{
         for (iter = queue_socket.begin(); iter != queue_socket.end(); iter++) {
             int sock = *iter;
-            sendData(sock, (char *) &length, sizeof(length));
-            sendData(sock, (char *) toall.c_str(), length);
+            sentBytes = sendData(sock, (char *) &length, sizeof(length));
+            if (sentBytes <= 0){
+                return;
+            }
+            sentBytes = sendData(sock, (char *) toall.c_str(), length);
+            if (sentBytes <= 0){
+                return;
+            }
         }
     }
 
@@ -347,15 +364,42 @@ void sendAll(bool isPlayer, std::string toall){
 void send(std::string msg, int sock)
 {
     length = msg.length();
-    sendData(sock, (char *) &length, sizeof(length));
-    sendData(sock, (char *) msg.c_str(), length);
+    sentBytes = sendData(sock, (char *) &length, sizeof(length));
+    if (sentBytes <= 0){
+        return;
+    }
+    sentBytes = sendData(sock, (char *) msg.c_str(), length);
+    if (sentBytes <= 0){
+        return;
+    }
 }
 
 void recv_length(int sock, size_t len_string, char * buffer)
 {
-    recv(sock, (unsigned char *) &len_string, sizeof(len_string), 0);
     int size;
+    size = recv(sock, (unsigned char *) &len_string, sizeof(len_string), 0);
+    if (size <= 0)
+    {
+        player_quitting(sock);
+//        std::cout << "11recv() failed, or the connection is closed. " << std::endl;
+//        FD_CLR(sock, &recvSockSet);
+////        FD_CLR(sock, &backupSet);
+////        FD_CLR(sock, &tempset);
+//
+//        while (FD_ISSET(maxDesc, &recvSockSet) == false){
+//            maxDesc -= 1;
+//        }
+//
+//        quit_players[sock] = players[sock];
+//        players.erase(sock);
+//        len_string = -1;
+//        std::cout << "YO" << std::endl;
+        length = -1;
+        return;
+    }
+    size = 0;
     receiveData(sock, buffer, size);
+    return;
 }
 
 int handle_error(std::string error_message){
@@ -376,4 +420,27 @@ void game_clear(){
     }
     return;
 
+}
+
+void askTime(int sock, char * buffer){
+    send("Please enter the time (in seconds) (must be greater than or equal to 30s) (default 180s (3min)): ", sock);
+    recv_length(sock, length, buffer);
+    while(length < 30){
+        send("Please enter a valid number (must be greater than or equal to 30s) (default 180s (3min)): ", sock);
+        length = 0;
+        recv_length(sock, length, buffer);
+        if (length = -1){
+            break;
+        }
+        if (std::string(buffer).compare(" ") == 0){
+            total_time = 180;
+            break;
+        }
+        memset(buffer, 0, BUFFERSIZE);
+    }
+    if (length >= 30){
+        total_time = atoi(buffer);
+    }
+
+    return;
 }

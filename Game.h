@@ -20,3 +20,5 @@ void display(int sock);
 void *start_thread(void* fd);
 float time_elapsed();
 void update_rate(player *player);
+void player_quitting(int);
+

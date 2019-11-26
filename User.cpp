@@ -19,14 +19,28 @@
 
 #define BUFFERSIZE 512
 
-int handle_error(std::string error_message, int exit_with);
+volatile sig_atomic_t flag = 0;
+int socket_desc;
+size_t total_size;
 
+void handle(int interr){
+    std::string quitting = "mequitting";
+    total_size = quitting.length();
+    send(socket_desc, (char *) &total_size, sizeof(total_size), 0);
+    send(socket_desc, (char *) quitting.c_str(), total_size, 0);
+    flag = 1;
+    std::cout << "Thank you for playing!" << std::endl;
+    close(socket_desc);
+    exit(-1);
+}
+
+int handle_error(std::string error_message, int exit_with);
 
 int main(int argc, char * argv[]) {
 
-    int socket_desc;
+
     struct sockaddr_in serverAddr;
-    size_t total_size;
+
 
     char inBuffer[BUFFERSIZE];
     char outBuffer[BUFFERSIZE];
@@ -41,7 +55,7 @@ int main(int argc, char * argv[]) {
     int port = atoi(argv[1]);
 
 
-//    signal(SIGINT, handle);
+    signal(SIGINT, handle);
 
     if ((socket_desc = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
         handle_error("socket() failed", 1);
@@ -58,9 +72,12 @@ int main(int argc, char * argv[]) {
 
     if (connect(socket_desc, (struct sockaddr *) &serverAddr, sizeof(serverAddr)) < 0)
         handle_error( "connect() failed", 1);
-//    pthread_t timekeeper;
-//    pthread_create(&timekeeper, NULL, term_time, (void*)&socket_desc);
-    while (!quit) {
+
+//    signal(SIGINT, sig_handler);
+//    signal(SIGKILL, sig_handler);
+//    signal(SIGTERM, sig_handler);
+
+    while (!quit && !flag) {
         // Clear the buffers
         total_size = 0;
         memset(&outBuffer, 0, BUFFERSIZE);
@@ -109,7 +126,6 @@ int main(int argc, char * argv[]) {
     }
 
     close(socket_desc);
-    std::cout << "Thank you for playing!" << std::endl;
     exit(0);
 }
 

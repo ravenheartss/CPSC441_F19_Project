@@ -44,6 +44,7 @@ float total_time = 300.0;
 struct timeval timeout = {0, 10};
 size_t len = 0;
 
+void observe();
 
 bool descending (const player *struct1, const player *struct2){
 
@@ -128,9 +129,11 @@ void game_loop()
 }
 
 void finish_game(){
-    display_all();
-    sendAll(1, "Thank you for playing!");
-    players.clear();
+    if (get_num_players() != 0){
+        display_all();
+        sendAll(1, "Thank you for playing!");
+        players.clear();
+    }
     quit_players.clear();
     game_clear();
     inGame = false;
@@ -230,6 +233,34 @@ void update_rate(player *player){
     player -> rate = rate;
 }
 
+void observe(){
+    std::unordered_map <int, struct player>::iterator temp;
+    sort_ranks();
+    float time_remaining = get_time_remaining();
+    std::string fmt = time_remaining > 0 ? "Time Remaining = " + std::to_string(get_time_remaining()) : "Game is over!";
+    fmt += "\n\nRank  Name          Speed    Errors\n\n";
+    sendAll(1, fmt);
+    fmt = "";
+    int i = 1;
+    for (it1 = for_sorting.begin(); it1 != for_sorting.end(); it1++){
+        fmt = fmt + std::to_string(i) + ")" + "    " + (*it1)->player_name;
+        int j = 14 - (*it1)->player_name.length();
+        while( j != 0){
+            fmt += " ";
+            j--;
+        }
+        fmt += std::to_string((*it1)->rate);
+        j = 9 - std::to_string((*it1)->rate).length();
+        while(j != 0){
+            fmt += " ";
+            j--;
+        }
+        fmt += std::to_string((*it1)->errors) + "\n";
+        i++;
+    }
+    sendAll(0, fmt);
+}
+
 void monitor_sockets(){
     char * buff = new char[BUFFERSIZE];
     std::string input;
@@ -261,14 +292,35 @@ void monitor_sockets(){
             recv_length(sock, len, buff);
             input = std::string(buff);
             input.erase(std::remove(input.begin(), input.end(), '\n'),input.end());
+            if (input.compare("mequitting") == 0){
+                player_quitting(sock);
+                break;
+            }
             check(sock, input);
             display(sock);
+            observe();
             input = "Type: " + get_word(sock) + "\n\n";
             send(input, sock);
         }
     }
     delete[] buff;
     finish_game();
+}
+
+void player_quitting(int socket){
+
+    FD_CLR(socket, &recvSockSet);
+
+    while (FD_ISSET(maxDesc, &recvSockSet) == false){
+        maxDesc -= 1;
+    }
+    memcpy(&backupSet, &recvSockSet, sizeof(recvSockSet));
+    quit_players[socket] = players[socket];
+    players.erase(socket);
+    if (players.size() == 0){
+        finish_game();
+    }
+    return;
 }
 
 
