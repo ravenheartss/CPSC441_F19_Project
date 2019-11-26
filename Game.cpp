@@ -307,21 +307,7 @@ void monitor_sockets(){
     finish_game();
 }
 
-void player_quitting(int socket){
 
-    FD_CLR(socket, &recvSockSet);
-
-    while (FD_ISSET(maxDesc, &recvSockSet) == false){
-        maxDesc -= 1;
-    }
-    memcpy(&backupSet, &recvSockSet, sizeof(recvSockSet));
-    quit_players[socket] = players[socket];
-    players.erase(socket);
-    if (players.size() == 0){
-        finish_game();
-    }
-    return;
-}
 
 
 

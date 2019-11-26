@@ -19,6 +19,7 @@
 #include "Game.h"
 #include "Server.h"
 #include <cstdio>
+#include <signal.h>
 #include <ctime>
 #include <pthread.h>
 
@@ -41,6 +42,7 @@ extern std::unordered_map <int, struct player> players;
 extern std::unordered_map <int, struct player> queue;
 extern std::unordered_map <int, struct player> quit_players;
 extern volatile bool inGame;
+volatile sig_atomic_t flag = 0;
 
 std::unordered_set <int> assigned_sock;
 std::unordered_set <int> queue_socket;
@@ -58,8 +60,16 @@ int handle_error(std::string error_message);
 bool name_length_invalid(size_t name_length);
 void askTime(int,char *);
 
+
+void handler(int interr){
+    flag = 1;
+    return;
+}
+
 int main(int argc, char *argv[])
 {
+
+
     int serverSock;                  // server socket descriptor
     int clientSock;                  // client socket descriptor
     struct sockaddr_in clientAddr;   // address of the client
@@ -175,14 +185,19 @@ void processSockets (fd_set readySocks)
             float sec = std::difftime(now, timeout_start);
             if ( sec >= timeout_game){
                 if (players.size() > 1){
-                    inGame = 1;
                 	sendAll(1, "Starting game...");
+                	if (flag){
+                	    flag = 0;
+                	    time(&timeout_start);
+                        return;
+                	}
+                    inGame = 1;
                     pthread_t thread;
                     pthread_create(&thread, NULL, start_thread, (void*)&readySocks);
                 }else {
                     print_wait(0, sec);
                     time(&timeout_start);
-                }
+            }
             }
         }
 
@@ -202,17 +217,22 @@ void receiveData (int sock, char* inBuffer, int& size){
 
 int sendData (int sock, char* buffer, int size)
 {
+    signal(SIGPIPE, handler);
+
     int bytesSent = 0;
 
     bytesSent = send(sock, (char *) buffer, size, 0);
-
-    if (bytesSent <= 0 || bytesSent != size)
-    {
-        std::cout << "error in sending" << std::endl;
-        std::cout << buffer << std::endl;
+    if (flag){
         player_quitting(sock);
         return bytesSent;
     }
+    if (bytesSent <= 0 || bytesSent != size)
+    {
+        std::cout << "error in sending" << std::endl;
+        player_quitting(sock);
+        return bytesSent;
+    }
+
     return bytesSent;
 }
 
@@ -381,19 +401,6 @@ void recv_length(int sock, size_t len_string, char * buffer)
     if (size <= 0)
     {
         player_quitting(sock);
-//        std::cout << "11recv() failed, or the connection is closed. " << std::endl;
-//        FD_CLR(sock, &recvSockSet);
-////        FD_CLR(sock, &backupSet);
-////        FD_CLR(sock, &tempset);
-//
-//        while (FD_ISSET(maxDesc, &recvSockSet) == false){
-//            maxDesc -= 1;
-//        }
-//
-//        quit_players[sock] = players[sock];
-//        players.erase(sock);
-//        len_string = -1;
-//        std::cout << "YO" << std::endl;
         length = -1;
         return;
     }
@@ -441,6 +448,35 @@ void askTime(int sock, char * buffer){
     if (length >= 30){
         total_time = atoi(buffer);
     }
+
+    return;
+}
+
+void player_quitting(int socket){
+
+    FD_CLR(socket, &recvSockSet);
+
+    while (FD_ISSET(maxDesc, &recvSockSet) == false){
+        maxDesc -= 1;
+    }
+
+    if (inGame) {
+        memcpy(&backupSet, &recvSockSet, sizeof(recvSockSet));
+    }
+
+    players.erase(socket);
+    if (players.size() == 0 && inGame){
+        finish_game();
+    }
+
+    maxDesc = 0;
+    for (qit = players.begin(); qit != players.end(); qit++){
+        maxDesc = std::max(maxDesc, qit->first);
+    }
+    assigned_sock.erase(socket);
+    queue_socket.erase(socket);
+
+    time(&timeout_start);
 
     return;
 }
