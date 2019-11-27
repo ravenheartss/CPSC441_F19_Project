@@ -442,11 +442,11 @@ void askTime(int sock, char * buffer){
         if (length == -1){
             break; // we should probably retry here instead???? disconnect user????
         }
-
     }while(atoi(buffer) < 30 );
-    if (length >= 30){
+    if (atoi(buffer) >= 30){
         total_time = atoi(buffer);
     }
+    memset(buffer, 0, BUFFERSIZE);
 }
 
 void player_quitting(int socket){
