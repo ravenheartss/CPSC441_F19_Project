@@ -145,7 +145,14 @@ void check(int sock_no, std::string typed){
     if (typed.compare(word_list[info.pos]) == 0){
         players[sock_no].pos++;
         players[sock_no].n_typed++;
-        update_rate(&players[sock_no]); 
+        // update rate for current player
+         //update_rate(&players[sock_no]);
+        
+        // update the rate for all players
+        for(it2 = players.begin(); it2 != players.end(); it2++){
+            update_rate(&players[it2->second.socket]);
+        }
+        
     }else{
         players[sock_no].errors++;
     }
