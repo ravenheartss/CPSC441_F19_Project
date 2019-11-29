@@ -6,15 +6,22 @@
 #include <stdlib.h>
 #include <fstream>
 #include "wrdgen.h"
+#include "server.h"
 #include <vector>
 std::string out_file = "temp_output.txt";
+extern int lang;
 
 std::vector <std::string> generate_random(int n_words){
 
     std::vector <std::string> list;
     std::string temp = std::to_string(n_words);
 //    const char * args[] = {"shuf", "-n", temp, "/usr/share/dict/words", nullptr};
-    std::string command = "shuf -n" + temp + " /usr/share/dict/words >> " + out_file;
+    std::string command;
+    if (lang == 2){
+        command = "shuf -n" + temp + " /usr/share/dict/nederlands >> " + out_file;
+    }else{
+        command = "shuf -n" + temp + " /usr/share/dict/british-english >> " + out_file;
+    }
 
     system(command.c_str());
     int n = 0;
