@@ -436,7 +436,7 @@ void game_clear(){
 void askTime(int sock, char * buffer){
     do{
         memset(buffer, 0, BUFFERSIZE);
-        send("Please enter the time (in seconds) (must be greater than or equal to 30s) (default 180s (3min)): ", sock);
+        send("Please enter the time (in seconds) (must be greater than or equal to 50s) (default 180s (3min)): ", sock);
         recv_length(sock, length, buffer); //length has a value of 97 here (equal to the length of the above message, why do we want to receive 97 bytes, the same what we send????)
         if (std::string(buffer).compare("\n") == 0){
             total_time = 180;
@@ -445,8 +445,8 @@ void askTime(int sock, char * buffer){
         if (length == -1){
             break; // we should probably retry here instead???? disconnect user????
         }
-    }while(atoi(buffer) < 30 );
-    if (atoi(buffer) >= 30){
+    }while(atoi(buffer) < 50 );
+    if (atoi(buffer) >= 50){
         total_time = atoi(buffer);
     }
     memset(buffer, 0, BUFFERSIZE);
