@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <fstream>
 #include "wrdgen.h"
-#include "server.h"
+#include "Server.h"
 #include <vector>
 std::string out_file = "temp_output.txt";
 extern int lang;

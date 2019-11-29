@@ -494,8 +494,8 @@ void askLang(int sock, char * buffer){
         if (length == -1){
             break; // we should probably retry here instead???? disconnect user????
         }
-    }while(length != 1);
-    if (length == 1){
+    }while(atoi(buffer) < 1 || atoi(buffer) > 2);
+    if (atoi(buffer) == 1 || atoi(buffer) == 2){
         lang = atoi(buffer);
     }
     memset(buffer, 0, BUFFERSIZE);
