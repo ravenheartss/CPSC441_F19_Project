@@ -242,7 +242,7 @@ void observe(){
     float time_remaining = get_time_remaining();
     std::string fmt = time_remaining > 0 ? "Time Remaining = " + std::to_string(get_time_remaining()) : "Game is over!";
     fmt += "\n\nRank  Name          Speed    Errors\n\n";
-    sendAll(1, fmt);
+    sendAll(0, fmt);
     fmt = "";
     int i = 1;
     for (it1 = for_sorting.begin(); it1 != for_sorting.end(); it1++){
