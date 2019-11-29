@@ -28,7 +28,6 @@
 
 std::unordered_map <int, struct player> players;
 std::unordered_map <int, struct player> queue;
-std::unordered_map <int, struct player> quit_players;
 std::vector <struct player *> for_sorting;
 std::vector <struct player *>::iterator it1;
 std::unordered_map <int, struct player>::iterator it2;
@@ -69,7 +68,6 @@ void add_player(int sock_no, std::string name){
 }
 
 void delete_player(int sock_no){
-    quit_players[sock_no] = players[sock_no];
     for (it1 = for_sorting.begin(); it1 != for_sorting.end(); it1++){
         struct player *me = *it1;
         if (me->socket == sock_no){
@@ -134,7 +132,6 @@ void finish_game(){
         sendAll(1, "Thank you for playing!");
         players.clear();
     }
-    quit_players.clear();
     game_clear();
     inGame = false;
     pthread_exit(NULL);
@@ -145,7 +142,7 @@ void check(int sock_no, std::string typed){
     if (typed.compare(word_list[info.pos]) == 0){
         players[sock_no].pos++;
         players[sock_no].n_typed++;
-        update_rate(&players[sock_no]); 
+        update_rate(&players[sock]);
     }else{
         players[sock_no].errors++;
     }

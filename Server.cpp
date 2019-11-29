@@ -37,10 +37,10 @@ int sentBytes;
 float timeout_game = 10.0;
 extern float total_time;
 std::time_t timeout_start;
+int lang = 1;
 
 extern std::unordered_map <int, struct player> players;
 extern std::unordered_map <int, struct player> queue;
-extern std::unordered_map <int, struct player> quit_players;
 extern volatile bool inGame;
 volatile sig_atomic_t flag = 0;
 
@@ -59,6 +59,7 @@ int sendData (int sock, char* buffer, int size);
 int handle_error(std::string error_message);
 bool name_length_invalid(size_t name_length);
 void askTime(int,char *);
+void askLang(int, char *);
 
 
 void handler(int interr){
@@ -126,6 +127,8 @@ int main(int argc, char *argv[])
             if (get_num_players() == 1){
                 memset(buffer,0,BUFFERSIZE);
                 askTime(clientSock, buffer);
+                memset(buffer, 0, BUFFERSIZE);
+                askLang(clientSock, buffer);
                 time(&timeout_start);
                 print_wait(1, timeout_game);
             }
@@ -476,4 +479,24 @@ void player_quitting(int socket){
     time(&timeout_start);
 
     return;
+}
+
+void askLang(int sock, char * buffer){
+    do{
+        memset(buffer, 0, BUFFERSIZE);
+
+        send("Select a language from below: \n\n 1. British English \n 2. Dutch\n\nSelect option (Index) (Default: English): ", sock);
+        recv_length(sock, length, buffer); //length has a value of 97 here (equal to the length of the above message, why do we want to receive 97 bytes, the same what we send????)
+        if (std::string(buffer).compare("\n") == 0){
+            lang = 1;
+            break;
+        }
+        if (length == -1){
+            break; // we should probably retry here instead???? disconnect user????
+        }
+    }while(length != 1);
+    if (length == 1){
+        lang = atoi(buffer);
+    }
+    memset(buffer, 0, BUFFERSIZE);
 }
